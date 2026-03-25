@@ -1,0 +1,70 @@
+{
+  "skill_name": "ddd-canvas-generator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Quiero armar el Bounded Context Canvas para el sistema de Inventario de una tienda de ropa. El contexto se encarga de recibir pedidos de reabastecimiento, manejar el stock y notificar cuando algo falta.",
+      "expected_output": "The skill should identify this as a Bounded Context Canvas task. It MUST ask clarifying questions for each section (Strategic Classification, Purpose, etc.) and SHOULD provide a preliminary critique (e.g., questioning if 'Pedidos de reabastecimiento' belongs here or in a Purchasing context). It MUST NOT generate the full canvas immediately.",
+      "assertions": [
+        { "type": "not_contains", "value": "# Bounded Context Canvas" },
+        { "type": "contains", "value": "Strategic Classification" },
+        { "type": "contains", "value": "?" },
+        { "type": "custom", "description": "Must ask at least 2 clarifying questions before generating any section content" },
+        { "type": "custom", "description": "Must challenge whether 'pedidos de reabastecimiento' belongs in this context or a separate Purchasing context" }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Create an Aggregate Design Canvas for 'Shipment'. It handles shipping items, updating locations, and delivery. It must be consistent with the delivery address.",
+      "expected_output": "The skill should identify this as an Aggregate Design Canvas task. It MUST ask for state transitions, invariants, commands, and throughput metrics. It SHOULD point out potential concurrency issues if 'updating locations' is too frequent for a single aggregate instance.",
+      "assertions": [
+        { "type": "not_contains", "value": "# Aggregate Design Canvas" },
+        { "type": "contains", "value": "State Transition" },
+        { "type": "contains", "value": "Throughput" },
+        { "type": "custom", "description": "Must warn about concurrency risk from frequent location updates on a single aggregate instance" },
+        { "type": "custom", "description": "Must ask about command handling rate and number of clients before generating Throughput section" }
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Tengo un microservicio de pagos que procesa tarjetas de crédito, gestiona reembolsos, y envía notificaciones de cobro. Quiero documentarlo con un Bounded Context Canvas.",
+      "expected_output": "The skill should identify this as a BC Canvas task. It MUST question whether notifications belong in this context or a separate Notification context (leaky boundary). It SHOULD ask about strategic classification and whether this is a Core or Supporting domain.",
+      "assertions": [
+        { "type": "not_contains", "value": "# Bounded Context Canvas" },
+        { "type": "contains", "value": "?" },
+        { "type": "custom", "description": "Must challenge whether 'envía notificaciones' belongs in the Payment context or a separate Notification context" },
+        { "type": "custom", "description": "Must ask about Strategic Classification before generating" },
+        { "type": "custom", "description": "Must not generate more than 2 sections in the first turn" }
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Design an Aggregate for 'Ticket' in a concert ticket sales system. High concurrency expected — thousands of users trying to buy tickets at the same time for popular events.",
+      "expected_output": "The skill should immediately flag the high concurrency as a critical design concern. It MUST ask about throughput metrics (command rate, number of clients) and propose design alternatives (e.g., reservation-based pattern, saga, or splitting the aggregate by seat section). It MUST NOT ignore the concurrency constraint.",
+      "assertions": [
+        { "type": "not_contains", "value": "# Aggregate Design Canvas" },
+        { "type": "contains", "value": "concurren" },
+        { "type": "contains", "value": "Throughput" },
+        { "type": "custom", "description": "Must propose at least one alternative aggregate boundary to reduce concurrency conflict (e.g., per-section, per-row, reservation saga)" },
+        { "type": "custom", "description": "Must estimate conflict chance as High given the described scenario" }
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Quiero modelar mi dominio de e-commerce. Ayudame a documentarlo.",
+      "expected_output": "The request is ambiguous — 'e-commerce domain' is too broad. The skill MUST ask whether the user needs a Bounded Context Canvas (to define boundaries) or an Aggregate Design Canvas (for a specific aggregate). It should suggest starting with the BC Canvas to define context boundaries first.",
+      "assertions": [
+        { "type": "not_contains", "value": "# Bounded Context Canvas" },
+        { "type": "not_contains", "value": "# Aggregate Design Canvas" },
+        { "type": "contains", "value": "?" },
+        { "type": "custom", "description": "Must ask user to clarify whether they need a Bounded Context Canvas or Aggregate Design Canvas" },
+        { "type": "custom", "description": "Must suggest starting with Bounded Context Canvas to define boundaries before drilling into aggregates" }
+      ],
+      "files": []
+    }
+  ]
+}

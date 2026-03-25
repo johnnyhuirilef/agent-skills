@@ -1,0 +1,81 @@
+{
+  "skill_name": "unit-test-declarative-architect",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Generame el test unitario para un Use Case 'ProcessOrder' que depende de un 'OrderRepository' y un 'PaymentService'. El PaymentService devuelve un Result (neverthrow).",
+      "expected_output": "The skill MUST generate a Fishery Factory for Order, an InMemoryOrderRepository, and a test suite with a setup() function. The naming MUST use natural language ('should X when Y'). It MUST include AAA comments and use Result type assertions (isOk, isErr, _unsafeUnwrap).",
+      "assertions": [
+        { "type": "contains", "value": "setup" },
+        { "type": "contains", "value": "Factory.define" },
+        { "type": "contains", "value": "InMemory" },
+        { "type": "contains", "value": "// Arrange" },
+        { "type": "contains", "value": "// Act" },
+        { "type": "contains", "value": "// Assert" },
+        { "type": "contains", "value": "isOk()" },
+        { "type": "contains", "value": "isErr()" },
+        { "type": "not_contains", "value": "should_" },
+        { "type": "custom", "description": "Must include at least 3 test cases: happy path, entity not found, and business logic error" }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Create unit tests for 'UserRegistration' use case. It depends on 'UserRepository' and 'EmailService'. Use exceptions for error handling.",
+      "expected_output": "The skill MUST generate the Factory, the InMemoryUserRepository, and tests that use rejects.toThrow for error cases. The setup() function must return Fakes and mocks. Assertions should verify repository state when applicable.",
+      "assertions": [
+        { "type": "contains", "value": "setup" },
+        { "type": "contains", "value": "InMemory" },
+        { "type": "contains", "value": "rejects.toThrow" },
+        { "type": "contains", "value": "// Arrange" },
+        { "type": "contains", "value": "findById" },
+        { "type": "not_contains", "value": "should_" },
+        { "type": "custom", "description": "Must verify persisted state in the InMemory repository, not just mock call verification" }
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Generate tests for 'TransferFunds' use case. It depends on 'AccountRepository', 'TransactionLogger', and 'FraudDetectionService'. TransactionLogger should be mocked, AccountRepository should be a Fake. FraudDetectionService returns Result.",
+      "expected_output": "The skill must handle 3+ dependencies correctly: Fake for AccountRepository, mock for TransactionLogger and FraudDetectionService. Must generate setup() returning all three plus the SUT. Tests must cover: successful transfer, insufficient funds, fraud detected.",
+      "assertions": [
+        { "type": "contains", "value": "InMemoryAccountRepository" },
+        { "type": "contains", "value": "mock<TransactionLogger>" },
+        { "type": "contains", "value": "mock<FraudDetectionService>" },
+        { "type": "contains", "value": "setup" },
+        { "type": "custom", "description": "setup() must return at least 4 items: repository, transactionLogger, fraudDetectionService, useCase" },
+        { "type": "custom", "description": "Must include test for fraud detection failure path using Result type assertions" }
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Write tests for 'CreateInvoice' use case. The Invoice entity has nested LineItems (each with Product reference and quantity). Invoice depends on 'InvoiceRepository' and 'TaxCalculator'.",
+      "expected_output": "The skill must generate a Factory that handles nested structures (Invoice with LineItems containing Product references). Must show .build() with nested overrides. InMemory repo must support the full Invoice entity.",
+      "assertions": [
+        { "type": "contains", "value": "Factory.define" },
+        { "type": "contains", "value": "items" },
+        { "type": "contains", "value": ".build(" },
+        { "type": "contains", "value": "InMemoryInvoiceRepository" },
+        { "type": "custom", "description": "Factory must generate nested LineItems array with at least product and quantity fields" },
+        { "type": "custom", "description": "Must include a test that overrides specific LineItem data using .build() with nested overrides" }
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Mi proyecto usa Vitest. Generame tests para un use case 'CancelSubscription' que depende de 'SubscriptionRepository' y 'BillingGateway'. Usa Result types.",
+      "expected_output": "The skill MUST detect Vitest from the user's statement and use vitest-mock-extended import instead of jest-mock-extended. All other patterns (setup, AAA, Fakes, naming) must remain the same.",
+      "assertions": [
+        { "type": "contains", "value": "vitest-mock-extended" },
+        { "type": "not_contains", "value": "jest-mock-extended" },
+        { "type": "contains", "value": "setup" },
+        { "type": "contains", "value": "InMemory" },
+        { "type": "contains", "value": "isOk()" },
+        { "type": "contains", "value": "isErr()" },
+        { "type": "custom", "description": "Must use 'vitest-mock-extended' import, never 'jest-mock-extended', since user specified Vitest" }
+      ],
+      "files": []
+    }
+  ]
+}
