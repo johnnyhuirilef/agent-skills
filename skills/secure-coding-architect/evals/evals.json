@@ -1,0 +1,45 @@
+{
+  "skill_name": "secure-coding-architect",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Here is an Express endpoint for updating a user's bio: `app.post('/api/user/bio', async (req, res) => { let bio = req.body.bio; let userId = req.body.userId; let query = \"UPDATE users SET bio = '\" + bio + \"' WHERE id = \" + userId; await db.execute(query); res.send('OK'); });` Please refactor it to make it production-ready.",
+      "expected_output": "The output must start with the Security Checklist explaining the fixes (SQL injection, IDOR/auth checks, input validation). The code must be declarative TypeScript, using Zod for validation, parameterized queries, UUIDs, and avoiding 'let'."
+    },
+    {
+      "id": 2,
+      "prompt": "I need to build a new Node.js/Express service that allows users to download invoices by their ID. Give me the controller code.",
+      "expected_output": "The output must start with the Security Checklist. The code must be in TypeScript, implement rate limiting, UUID validation, ensure the user owns the invoice (A01: Broken Access Control), and use declarative/immutable patterns without side-effects in the core logic."
+    },
+    {
+      "id": 3,
+      "prompt": "Review this React component: `function UserComment({ comment }) { return <div className=\"comment-box\" dangerouslySetInnerHTML={{ __html: comment.text }} /> }`",
+      "expected_output": "The output must start with the Security Checklist explaining XSS (Cross-Site Scripting). The refactored code should remove dangerouslySetInnerHTML or use a sanitizer like DOMPurify, written in a declarative React style."
+    },
+    {
+      "id": 4,
+      "prompt": "I'm building a feature where users can provide a URL to their portfolio website, and my Express server fetches the metadata (title, description) to display a preview. Here is my code: `app.post('/api/preview', async (req, res) => { const response = await fetch(req.body.url); const text = await response.text(); res.send(text); });` Secure this.",
+      "expected_output": "Security Checklist must address A10: SSRF (Server-Side Request Forgery). The code must validate the URL, prevent fetching local IPs/internal network addresses (127.0.0.1, AWS metadata endpoints), validate the payload with Zod, and handle fetch errors securely without leaking internal network states."
+    },
+    {
+      "id": 5,
+      "prompt": "We need an endpoint to upload user profile pictures. The current code uses multer: `app.post('/upload', upload.single('avatar'), (req, res) => { fs.renameSync(req.file.path, '/uploads/' + req.file.originalname); res.send('Uploaded'); });` Make this bulletproof.",
+      "expected_output": "Checklist must address Path Traversal (Directory Traversal), arbitrary file execution, and DoS. Implementation must rename the file to a generated UUID (discarding originalname), strictly validate MIME types (rejecting SVG/HTML disguised as images), limit file size, and use pure functions for the validation logic."
+    },
+    {
+      "id": 6,
+      "prompt": "Refactor this legacy login endpoint: `app.post('/login', async (req, res) => { const user = await db.collection('users').findOne({ email: req.body.email, password: md5(req.body.password) }); if (user) { res.json({ token: jwt.sign(user, 'secret') }); } else { res.status(401).send('User ' + req.body.email + ' not found or wrong password'); } });`",
+      "expected_output": "Checklist covers Cryptographic Failures (A02), Auth Failures (A07), and Information Leakage. Must replace MD5 with bcrypt/argon2, use HttpOnly/Secure/SameSite cookies instead of returning token in JSON, fix the timing attack/user enumeration vulnerability (generic error messages), and implement auth rate limiting."
+    },
+    {
+      "id": 7,
+      "prompt": "I have a MongoDB search endpoint: `app.post('/search', async (req, res) => { const users = await User.find(req.body.filter); console.log('Search executed by', req.user, 'Result:', users); res.json(users); });` Review and fix.",
+      "expected_output": "Checklist covers NoSQL Injection (A05) and PII Data Leakage (A04). The code must use Zod to strictly define allowed filter fields (preventing `{$gt: ''}` injection payloads), redact or pick specific fields before logging (no PII in logs), and only return public user data (Data Transfer Objects / pure projection functions)."
+    },
+    {
+      "id": 8,
+      "prompt": "Here is a fund transfer endpoint: `app.post('/transfer', async (req, res) => { const { fromUserId, toUserId, amount } = req.body; const fromUser = await db.query('SELECT balance FROM accounts WHERE user_id = ' + fromUserId); if (fromUser.balance >= amount) { await db.query('UPDATE accounts SET balance = balance - ' + amount + ' WHERE user_id = ' + fromUserId); await db.query('UPDATE accounts SET balance = balance + ' + amount + ' WHERE user_id = ' + toUserId); res.send('Success'); } else { res.status(400).send('Insufficient funds'); } });` Refactor this completely for a high-security financial system.",
+      "expected_output": "Checklist covers SQL Injection, IDOR (verifying req.user.id == fromUserId), Business Logic Flaws (negative amount injection), Race Conditions/Integrity (A08). Code must be declarative, use Database Transactions (ACID), strict Zod numeric validation (positive, max limits), parameterized queries, and implement an Idempotency Key to prevent double-spending."
+    }
+  ]
+}
