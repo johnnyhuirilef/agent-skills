@@ -59,6 +59,20 @@ Generate high-quality declarative unit tests with AAA structure, FIRST/DAMP prin
 - VALID_INPUT constant pattern
 - Nested describe organization
 
+### 3. **secure-coding-architect**
+Implement secure coding practices, prevent vulnerabilities, and harden applications following OWASP Top 10 (2025) and API security best practices.
+
+**Use when:**
+- Writing, refactoring, or reviewing code that handles user input, authentication, database queries, file uploads, API endpoints, or session management.
+- Enforcing "Secure by Design" and "Defense in Depth" principles.
+- Ensuring code integrity through declarative and immutable programming patterns.
+
+**Features:**
+- Strict adherence to OWASP Top 10 (2025).
+- Mandatory Security Checklist generation explaining the "Why".
+- Enforces declarative, immutable, and low-entropy TypeScript/JavaScript.
+- Automatic prevention of IDOR, Injection, XSS, SSRF, and more.
+
 ## Installation
 
 ### Via skills.sh CLI
@@ -74,7 +88,7 @@ Follow your agent's documentation for loading custom skills from GitHub reposito
 
 ## Repository Structure
 
-```
+```text
 .
 ├── README.md                          # This file
 ├── skills/
@@ -85,15 +99,19 @@ Follow your agent's documentation for loading custom skills from GitHub reposito
 │   │   │   └── aggregate-v1.1.md
 │   │   └── evals/
 │   │       └── evals.json
-│   └── unit-test-declarative-architect/
-│       ├── SKILL.md
-│       ├── references/
-│       │   ├── test-template.md
-│       │   ├── factory-template.md
-│       │   ├── repository-fake-template.md
-│       │   └── result-type-testing.md
+│   ├── unit-test-declarative-architect/
+│   │   ├── SKILL.md
+│   │   ├── references/
+│   │   │   ├── test-template.md
+│   │   │   ├── factory-template.md
+│   │   │   ├── repository-fake-template.md
+│   │   │   └── result-type-testing.md
+│   │   └── evals/
+│   │       └── evals.json
+│   └── secure-coding-architect/
+│       ├── SKILL.md                  # Security principles & rules
 │       └── evals/
-│           └── evals.json
+│           └── evals.json            # 8 rigorous test scenarios
 ```
 
 ## Skill Development Philosophy
@@ -103,7 +121,7 @@ Follow your agent's documentation for loading custom skills from GitHub reposito
 3. **Document thoroughly** — Include examples, rules, and anti-patterns
 4. **Test comprehensively** — Cover happy paths, edge cases, and failure scenarios
 5. **Challenge inputs** — Never accept poor design without technical rationale
-6. **Reference established standards** — Build on proven methodologies (DDD, C4, SOLID, testing frameworks)
+6. **Reference established standards** — Build on proven methodologies (DDD, C4, SOLID, testing frameworks, OWASP)
 
 ## Key Principles
 
@@ -129,6 +147,7 @@ These skills embody a commitment to software engineering excellence:
 - [C4 Model](https://c4model.com/) — Brown, S.
 - [Testing Best Practices](https://github.com/goldbergyoni/javascript-testing-best-practices)
 - [Anthropic Skills](https://github.com/anthropics/skills)
+- [OWASP Top 10 (2025)](https://owasp.org/Top10/2025/)
 
 ## Contributing
 
@@ -141,4 +160,4 @@ These skills are provided as reference implementations and educational examples.
 ---
 
 **Philosophy:** Better architecture, better tests, better software.  
-**Latest Update:** March 2025
+**Latest Update:** April 2026
