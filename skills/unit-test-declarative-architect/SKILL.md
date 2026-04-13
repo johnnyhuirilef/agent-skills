@@ -47,10 +47,16 @@ Check the Use Case's return type to determine the assertion pattern:
 - Identify the Data Structures (Entities/DTOs) involved.
 - Search for existing factories, Fakes, and test utilities in the project.
 
-### 2. Implementation Order
+### 2. Paced Implementation Order (STRICT 2-TURN WORKFLOW)
+To prevent context exhaustion and ensure high-quality outputs, you MUST split the implementation across two distinct conversational turns. Do NOT generate the tests in the same turn as the infrastructure.
+
+**Turn 1: Test Infrastructure**
 1.  **Factory Creation**: Create or update the Fishery Factory for the required entities.
 2.  **In-Memory Repository**: Implement the Fake repository if it doesn't exist.
-3.  **Test Suite**: Implement the `setup()` function, `VALID_INPUT` constants, and AAA test cases.
+3.  **STOP AND ASK FOR CONFIRMATION**: Present the Factory and Fake to the user. Ask if they look correct or if they need adjustments before proceeding to write the tests.
+
+**Turn 2: Test Suite Generation**
+1.  **Test Suite**: ONLY after user approval of Turn 1, implement the `setup()` function, `VALID_INPUT` constants, and AAA test cases.
 
 ### 3. Verification & Critique (Non-Yes-Man)
 - Check if the test is DAMP (Descriptive And Maintainable).
