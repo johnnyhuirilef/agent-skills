@@ -1,163 +1,82 @@
 # Agent Skills
 
-A curated collection of high-quality, production-ready AI agent skills for software architecture, domain-driven design, and testing excellence.
+A curated collection of high-quality, production-ready AI agent skills for software architecture, domain-driven design, testing excellence, and code review.
 
 These skills are compatible with:
 - ✅ **Claude Code** / **Claude.ai**
 - ✅ **Cursor** / **Windsurf**
-- ✅ **skills.sh ecosystem** (`npx skills add johnnyhuirilef/agent-skills`)
-
-## About This Repository
-
-This repository provides expert-level skills designed to teach AI agents how to perform complex technical tasks in a deterministic, declarative, and maintainable manner. Skills are built on principles of:
-
-- **Deterministic execution** — Consistent output regardless of phrasing
-- **Declarative intent** — Focus on *what* should be accomplished, not *how*
-- **Best practices enforcement** — Industry standards, architectural principles, and quality gates
-- **Low entropy design** — Minimal complexity, maximum clarity
-- **Quality-first attitude** — Skills actively challenge poor design decisions
-
-## Available Skills
-
-Each skill is self-contained with:
-- `SKILL.md` — Core instructions, workflows, and principles
-- `references/` — Detailed templates, patterns, and examples
-- `evals/` — Formal evaluations with structured assertions
-
-### 1. **ddd-canvas-generator**
-Generate and critique Domain-Driven Design canvas designs (Bounded Context Canvas v5, Aggregate Design Canvas v1.1).
-
-**Use when:**
-- Modeling strategic domain boundaries and contexts
-- Designing aggregates with proper transaction boundaries
-- Creating C4 system architecture diagrams
-- Validating domain language and entity relationships
-- Challenging architectural decisions with DDD principles
-
-**Features:**
-- Dual-canvas workflow (BC → Aggregate)
-- C4 Context/Container diagrams (Mermaid)
-- Aggregate state transition diagrams
-- Strategic classification (Core/Supportive/Generic)
-- 15 domain role archetypes
-
-### 2. **unit-test-declarative-architect**
-Generate high-quality declarative unit tests with AAA structure, FIRST/DAMP principles, and automatic test framework detection.
-
-**Use when:**
-- Writing unit tests for Use Cases and Domain Services
-- Creating test data factories with Fishery + Faker
-- Implementing In-Memory repository Fakes
-- Testing Result-type (neverthrow) error handling
-- Designing reusable test infrastructure
-
-**Features:**
-- Jest/Vitest auto-detection
-- Dual error handling patterns (Result types + exceptions)
-- Map-based In-Memory repository Fakes
-- Natural language test naming
-- VALID_INPUT constant pattern
-- Nested describe organization
-
-### 3. **secure-coding-architect**
-Implement secure coding practices, prevent vulnerabilities, and harden applications following OWASP Top 10 (2025) and API security best practices.
-
-**Use when:**
-- Writing, refactoring, or reviewing code that handles user input, authentication, database queries, file uploads, API endpoints, or session management.
-- Enforcing "Secure by Design" and "Defense in Depth" principles.
-- Ensuring code integrity through declarative and immutable programming patterns.
-
-**Features:**
-- Strict adherence to OWASP Top 10 (2025).
-- Mandatory Security Checklist generation explaining the "Why".
-- Enforces declarative, immutable, and low-entropy TypeScript/JavaScript.
-- Automatic prevention of IDOR, Injection, XSS, SSRF, and more.
+- ✅ **skills.sh ecosystem**
 
 ## Installation
 
-### Via skills.sh CLI
+### All skills at once
 ```bash
 npx skills add johnnyhuirilef/agent-skills
 ```
 
-### In Claude.ai / Claude Code
-Upload this repository as a custom skill, or reference skills individually.
-
-### In Cursor / Windsurf
-Follow your agent's documentation for loading custom skills from GitHub repositories.
-
-## Repository Structure
-
-```text
-.
-├── README.md                          # This file
-├── skills/
-│   ├── ddd-canvas-generator/
-│   │   ├── SKILL.md                  # Skill definition
-│   │   ├── references/
-│   │   │   ├── bounded-context-v5.md
-│   │   │   └── aggregate-v1.1.md
-│   │   └── evals/
-│   │       └── evals.json
-│   ├── unit-test-declarative-architect/
-│   │   ├── SKILL.md
-│   │   ├── references/
-│   │   │   ├── test-template.md
-│   │   │   ├── factory-template.md
-│   │   │   ├── repository-fake-template.md
-│   │   │   └── result-type-testing.md
-│   │   └── evals/
-│   │       └── evals.json
-│   └── secure-coding-architect/
-│       ├── SKILL.md                  # Security principles & rules
-│       └── evals/
-│           └── evals.json            # 8 rigorous test scenarios
+### Individual skills
+```bash
+npx skills add johnnyhuirilef/agent-skills --skill 4r-review
+npx skills add johnnyhuirilef/agent-skills --skill ddd-canvas-generator
+npx skills add johnnyhuirilef/agent-skills --skill unit-test-declarative-architect
+npx skills add johnnyhuirilef/agent-skills --skill secure-coding-architect
 ```
-
-## Skill Development Philosophy
-
-1. **Start with evaluation** — Write evals before skill logic
-2. **Enforce determinism** — Make outputs predictable and repeatable
-3. **Document thoroughly** — Include examples, rules, and anti-patterns
-4. **Test comprehensively** — Cover happy paths, edge cases, and failure scenarios
-5. **Challenge inputs** — Never accept poor design without technical rationale
-6. **Reference established standards** — Build on proven methodologies (DDD, C4, SOLID, testing frameworks, OWASP)
-
-## Key Principles
-
-- **Non-negotiable Quality** — Skills actively critique poor decisions and refuse mediocrity
-- **Architectural Rigor** — Every skill enforces established patterns and best practices
-- **Declarative Interaction** — Users describe the business problem; the skill handles execution
-- **Low Complexity** — Minimize cyclomatic complexity without sacrificing purpose
-- **State of the Art** — Always reflect current best practices and modern tooling
-
-## Design Philosophy
-
-These skills embody a commitment to software engineering excellence:
-- **Deterministic & Declarative** — Never imperative, always architectural
-- **Low entropy, low cyclomatic complexity** — Without sacrificing purpose
-- **Rigorous critique** — Active challenge to poor design choices
-- **Formal execution** — Structured, precise, and auditable outputs
-
-## Standards & References
-
-- [Agent Skills Specification](https://agentskills.io)
-- [skills.sh Documentation](https://skills.sh/docs)
-- [Domain-Driven Design](https://domainlanguage.com/ddd/) — Evans, E.
-- [C4 Model](https://c4model.com/) — Brown, S.
-- [Testing Best Practices](https://github.com/goldbergyoni/javascript-testing-best-practices)
-- [Anthropic Skills](https://github.com/anthropics/skills)
-- [OWASP Top 10 (2025)](https://owasp.org/Top10/2025/)
-
-## Contributing
-
-These skills are designed to be iterated and improved. Found issues? Have suggestions? Open an issue or fork this repository.
-
-## License
-
-These skills are provided as reference implementations and educational examples. Use freely in your projects.
 
 ---
 
-**Philosophy:** Better architecture, better tests, better software.  
-**Latest Update:** April 2026
+## Available Skills
+
+### [4r-review](skills/4r-review/)
+Structured code review across four independent lenses — Risk, Readability, Reliability, Resilience. Forces coverage of every class of problem that single-axis reviews miss.
+
+**Triggers:** "review", "revisar", "auditar", "4R", "code review"
+
+---
+
+### [ddd-canvas-generator](skills/ddd-canvas-generator/)
+Generate and critique Domain-Driven Design canvases — Bounded Context Canvas v5 and Aggregate Design Canvas v1.1. Includes C4 diagrams, state transitions, and strategic classification.
+
+**Triggers:** DDD design, bounded context, aggregate modeling, domain canvas
+
+---
+
+### [unit-test-declarative-architect](skills/unit-test-declarative-architect/)
+Generate high-quality declarative unit tests with AAA structure, FIRST/DAMP principles, Fishery factories, and In-Memory Fakes. Auto-detects Jest or Vitest.
+
+**Triggers:** unit tests, test suite, Fishery factory, In-Memory repository, mock service
+
+---
+
+### [secure-coding-architect](skills/secure-coding-architect/)
+Enforce OWASP Top 10 (2025) and API security best practices across TypeScript/JavaScript. Generates mandatory security checklists and prevents IDOR, injection, XSS, and SSRF.
+
+**Triggers:** security review, authentication, user input, API endpoint, database query
+
+---
+
+## Repository Structure
+
+```
+skills/
+├── 4r-review/
+│   └── SKILL.md
+├── ddd-canvas-generator/
+│   ├── SKILL.md
+│   └── references/
+├── unit-test-declarative-architect/
+│   ├── SKILL.md
+│   └── references/
+└── secure-coding-architect/
+    └── SKILL.md
+```
+
+## Philosophy
+
+- **Deterministic** — consistent output regardless of phrasing
+- **Declarative** — describe what, not how
+- **Low entropy** — minimal complexity, maximum clarity
+- **Non-negotiable quality** — skills actively challenge poor design decisions
+
+---
+
+**Latest Update:** June 2026
