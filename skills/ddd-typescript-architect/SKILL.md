@@ -449,6 +449,8 @@ class BankAccount extends Entity<BankAccountId> { /* local identity — never re
 - Public constructor on Aggregate Root → WARNING (invariants not enforced at creation)
 - Aggregate referencing another Aggregate Root by object reference → WARNING (use ID + snapshot)
 - `new Date()` inside domain — not mockable → WARNING (use Clock port)
+- Aggregate with 10+ methods or 5+ internal Entities → WARNING: question whether the boundary is too large. If two internal Entities don't need to change together in the same transaction, they likely belong in separate Aggregates
+- Two internal Entities that are always loaded but rarely modified together → WARNING: consistency boundary may be wrong — evaluate splitting
 
 ---
 
@@ -744,6 +746,7 @@ Generate in this order:
 | VO mutated via public setter | CRITICAL | Invalidates immutability contract |
 | Module named `utils` or `shared` | CRITICAL | No semantic meaning — signals architecture smell |
 | Aggregate referencing another AR by object | WARNING | Use ID reference + snapshot instead |
+| Aggregate with 10+ methods or 5+ internal Entities | WARNING | Consistency boundary likely too large — evaluate splitting |
 | Public constructor on Aggregate Root | WARNING | Invariants not enforced at creation |
 | Event name missing version suffix | WARNING | Breaks backward compatibility on payload change |
 | `throw new Error()` from domain (no code) | WARNING | Loses semantic type information |
