@@ -20,6 +20,7 @@ npx skills add johnnyhuirilef/agent-skills --skill 4r-review
 npx skills add johnnyhuirilef/agent-skills --skill ddd-canvas-generator
 npx skills add johnnyhuirilef/agent-skills --skill unit-test-declarative-architect
 npx skills add johnnyhuirilef/agent-skills --skill secure-coding-architect
+npx skills add johnnyhuirilef/agent-skills --skill ddd-typescript-architect
 ```
 
 ---
@@ -54,6 +55,13 @@ Enforce OWASP Top 10 (2025) and API security best practices across TypeScript/Ja
 
 ---
 
+### [ddd-typescript-architect](skills/ddd-typescript-architect/)
+Implement and review all six DDD tactical patterns in TypeScript — Value Object, Entity, Domain Service, Domain Event, Aggregate, and Module. Enriched with production codebase patterns: base classes, DomainDeps, abstract class ports, ContextObject, ToPrimitives, Domain Error taxonomy, InMemory fakes, event versioning, and inter-aggregate coordination via snapshot. Enforces a deterministic 2-turn implementation workflow and a finding-by-finding grilling loop for reviews.
+
+**Triggers:** domain, entity, aggregate, value-object, domain-service, domain-event, module structure, domain errors, ports/adapters, DDD review
+
+---
+
 ## Repository Structure
 
 ```
@@ -66,8 +74,18 @@ skills/
 ├── unit-test-declarative-architect/
 │   ├── SKILL.md
 │   └── references/
-└── secure-coding-architect/
-    └── SKILL.md
+├── secure-coding-architect/
+│   └── SKILL.md
+└── ddd-typescript-architect/
+    ├── SKILL.md
+    ├── references/
+    │   ├── value-object-patterns.md
+    │   ├── aggregate-patterns.md
+    │   ├── module-structure.md
+    │   ├── domain-errors.md
+    │   └── domain-event-patterns.md
+    └── evals/
+        └── evals.json
 ```
 
 ## Philosophy

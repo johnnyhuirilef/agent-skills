@@ -1,0 +1,57 @@
+[
+  {
+    "id": "vo-typeorm-entity-antipattern",
+    "description": "Detects TypeORM @Entity() used on a domain-layer Value Object",
+    "input": "I have this class in my domain folder:\n@Entity()\nclass Money {\n  @Column() amount: number;\n  @Column() currency: string;\n}",
+    "expected_behaviors": [
+      "Identifies the CARDINAL ERROR of mixing TypeORM @Entity() with a DDD Value Object",
+      "Explains that TypeORM @Entity() is a persistence mapper, not a DDD concept",
+      "Proposes a split: domain Money VO + infrastructure MoneyDAO",
+      "Provides BLOCKER severity"
+    ]
+  },
+  {
+    "id": "stateful-domain-service",
+    "description": "Detects a Domain Service holding mutable state",
+    "input": "class TransactionService {\n  private result: Money;\n  async deposit(account: Account, money: Money) {\n    this.result = this.result.add(money);\n  }\n}",
+    "expected_behaviors": [
+      "Flags private result: Money as BLOCKER",
+      "Explains Node.js singleton shared state risk",
+      "Shows correct approach: return computed value instead of storing it"
+    ]
+  },
+  {
+    "id": "anemic-entity",
+    "description": "Detects an Anemic Domain Model",
+    "input": "class BankAccount {\n  public isLocked: boolean;\n  public balance: number;\n  public currency: string;\n}\n\nclass TransactionService {\n  add(account: BankAccount, second: Wallet) {\n    if (account.isLocked) return new Error('locked');\n    account.balance += second.amount;\n  }\n}",
+    "expected_behaviors": [
+      "Identifies Anemic Domain Model anti-pattern",
+      "Flags public mutable fields on Entity",
+      "Proposes moving the locking and balance logic into BankAccount methods",
+      "Marks as BLOCKER"
+    ]
+  },
+  {
+    "id": "correct-aggregate-structure",
+    "description": "Approves a correctly structured Aggregate",
+    "input": "class CustomerAccount {\n  constructor(private readonly id: string, private accounts: BankAccount[]) {}\n  addMoney(amount: number, currency: Currency): void {\n    if (this.accounts.every(a => !a.isForCurrency(currency))) throw new Error('no account for currency');\n    this.accounts = this.accounts.map(a => a.isForCurrency(currency) ? a.addMoney(amount) : a);\n  }\n}\nclass BankAccount {\n  constructor(private readonly id: string, private readonly currency: Currency, private balance: number) {}\n  isForCurrency(c: Currency): boolean { return this.currency.isEqual(c); }\n  addMoney(amount: number): BankAccount { return new BankAccount(this.id, this.currency, this.balance + amount); }\n}",
+    "expected_behaviors": [
+      "Identifies CustomerAccount as Aggregate Root with Global Identity",
+      "Identifies BankAccount as internal Entity with Local Identity",
+      "Notes correct immutable update pattern in addMoney",
+      "Approves the structure or provides only minor suggestions"
+    ]
+  },
+  {
+    "id": "module-naming-antipattern",
+    "description": "Detects bad module names",
+    "input": "My project structure is:\nsrc/\n  utils/\n  events/\n  shoppingAndCustomer/\n  strategy/",
+    "expected_behaviors": [
+      "Flags utils as CRITICAL with explanation",
+      "Flags events as CRITICAL — events belong inside their own module",
+      "Flags shoppingAndCustomer as WARNING — and signals two responsibilities",
+      "Flags strategy as WARNING — design pattern name, not business name",
+      "Proposes business-language alternatives"
+    ]
+  }
+]
