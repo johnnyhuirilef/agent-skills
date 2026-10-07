@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "Here is an Express endpoint for updating a user's bio: `app.post('/api/user/bio', async (req, res) => { let bio = req.body.bio; let userId = req.body.userId; let query = \"UPDATE users SET bio = '\" + bio + \"' WHERE id = \" + userId; await db.execute(query); res.send('OK'); });` Please refactor it to make it production-ready.",
-      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must cover SQL injection (parameterized query), IDOR (ownership from the session principal, not body userId), and strict schema validation with unknown keys rejected."
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must cover SQL injection (parameterized query), IDOR (ownership from the session principal, not body userId), and strict schema validation with unknown keys rejected. The decision logic is a pure function over readonly validated input with no let or in-place mutation, and side effects are isolated in a thin layer (STY rules)."
     },
     {
       "id": 2,
@@ -39,7 +39,7 @@
     {
       "id": 8,
       "prompt": "Here is a fund transfer endpoint: `app.post('/transfer', async (req, res) => { const { fromUserId, toUserId, amount } = req.body; const fromUser = await db.query('SELECT balance FROM accounts WHERE user_id = ' + fromUserId); if (fromUser.balance >= amount) { await db.query('UPDATE accounts SET balance = balance - ' + amount + ' WHERE user_id = ' + fromUserId); await db.query('UPDATE accounts SET balance = balance + ' + amount + ' WHERE user_id = ' + toUserId); res.send('Success'); } else { res.status(400).send('Insufficient funds'); } });` Refactor this completely for a high-security financial system.",
-      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must use a transaction with atomic conditional update, derive fromUserId from the session principal, validate positive bounded amount, use parameterized queries, and add an idempotency key."
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must use a transaction with atomic conditional update, derive fromUserId from the session principal, validate positive bounded amount, use parameterized queries, and add an idempotency key. The decision logic is a pure function over readonly validated input with no let or in-place mutation, and side effects are isolated in a thin layer (STY rules)."
     },
     {
       "id": 9,

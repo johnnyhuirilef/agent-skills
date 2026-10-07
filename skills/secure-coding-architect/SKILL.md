@@ -24,6 +24,7 @@ Load when code you write or change receives data from a less-trusted party, make
 - Secrets from the environment only; redact logs; log security events (CFG-1, CFG-6). Return generic errors (CFG-7).
 - Bound body size, concurrency, pagination, and time (RES-1, RES-3, RES-4). Rate-limit auth routes (RES-2).
 - Treat model output and tool arguments as untrusted input; re-authorize in the tool handler (AI-1, AI-2).
+- Write decisions as pure, immutable functions over readonly validated input; confine side effects to a thin shell; use atomic mutation where concurrency matters (STY-1, STY-2, STY-5, STY-6).
 
 ## Decision Gates
 
@@ -36,6 +37,7 @@ Load when code you write or change receives data from a less-trusted party, make
 | Config, secrets, dependencies, CI, logging, errors | `references/config-supply-chain-logging.md` | A02, A03, A08, A09, A10 |
 | Limits, queues, multi-tenant data, deletion, export | `references/resource-limits-and-data-isolation.md` | A01, A06 |
 | LLM calls, agents, tools, RAG, MCP | `references/ai-and-llm.md` | A01, A05 |
+| Business logic, state, concurrency, shared data | `references/functional-core-imperative-shell.md` | A01, A04, A06 |
 | Need a worked pattern | `references/examples.md` | - |
 
 ## Execution Steps
@@ -60,4 +62,5 @@ Load when code you write or change receives data from a less-trusted party, make
 - [config-supply-chain-logging.md](references/config-supply-chain-logging.md)
 - [resource-limits-and-data-isolation.md](references/resource-limits-and-data-isolation.md)
 - [ai-and-llm.md](references/ai-and-llm.md)
+- [functional-core-imperative-shell.md](references/functional-core-imperative-shell.md)
 - [examples.md](references/examples.md)
