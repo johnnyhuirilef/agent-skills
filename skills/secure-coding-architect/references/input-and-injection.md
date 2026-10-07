@@ -13,6 +13,7 @@ Trust boundary: any value from a request, URL fragment, header, file, queue, dat
 | INP-7 | MUST validate redirect targets against an allowlist of exact origins or relative paths. MUST NOT place untrusted data in `Location`, `Set-Cookie`, or other headers without rejecting CR/LF. | Open redirect, header injection, response splitting |
 | INP-8 | MUST check `event.origin` against an exact allowlist (and `event.source` when frames share an origin) in every `message` handler. MUST pass an explicit target origin to `postMessage`, never `*`, for sensitive data. | Cross-origin command and data theft |
 | INP-9 | MUST NOT build regular expressions from input; MUST escape if unavoidable. Complex patterns on untrusted strings MUST be linear-time (see RES-4). | ReDoS, regex injection |
+| INP-10 | `.strict()` is for untrusted input only. MUST NOT apply it to database rows, cache entries, or third-party responses: select explicit columns or pick known fields first, then parse. A new column or extra key MUST NOT turn into a 500 on every read. | Availability bug from schema drift, caches that never fill |
 
 ```ts
 const Query = z.object({ email: z.string().email().max(254) }).strict();

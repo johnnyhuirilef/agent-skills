@@ -16,6 +16,7 @@ Trust boundary: a credential, token, or cookie presented by a caller claiming to
 | AUTH-10 | API keys MUST be random, stored hashed, scoped server-side to tenant and actions, revocable, and never accepted in URLs. MUST NOT ship secret keys in client bundles. | Key leakage, scope escalation |
 | AUTH-11 | MUST NOT keep long-lived tokens in `localStorage` when a `HttpOnly` cookie fits. MUST clear browser storage and caches on logout and account switch, and key any client cache by account. | Token theft via XSS, cross-account data exposure |
 | AUTH-12 | MUST apply attempt throttling per account and per IP on login, reset, and MFA verification, with identical responses for unknown and known accounts. | Credential stuffing, account enumeration |
+| AUTH-13 | When replacing a weak password hash (MD5, SHA-*, unsalted), MUST ship the migration in code, not as a note: detect the legacy format, verify it with a constant-time comparison, then rehash to Argon2id on that successful login with a conditional update. MUST NOT pass a legacy hash to the new verifier, because it throws and locks out every existing user. | Account lockout, weak hashes left in place |
 
 ```ts
 const claims = jwt.verify(token, publicKey, {
