@@ -9,7 +9,7 @@ Reference for testing Use Cases that return `Result<T, E>` types (neverthrow, ox
 result.isOk()              // → true if success
 result.isErr()             // → true if error
 
-// Type narrowing (safe — after isOk/isErr check)
+// Type narrowing (production code only; never put `if` in a test body)
 if (result.isOk()) {
   result.value;            // → typed access to the Ok value
 }
@@ -31,7 +31,7 @@ result._unsafeUnwrapErr()  // → returns Err value (throws if Ok)
 
 ## Recommended Assertion Patterns
 
-### Pattern 1: Type Narrowing (preferred for type-safe assertions)
+### Pattern 1: Unsafe Unwrap (preferred; keeps the test body free of `if`)
 
 ```typescript
 it('should process order successfully when payment is approved', async () => {
@@ -47,9 +47,9 @@ it('should process order successfully when payment is approved', async () => {
 
   // Assert
   expect(result.isOk()).toBe(true);
-  if (!result.isOk()) return; // type guard — narrows to Ok
 
-  expect(result.value.status).toBe('COMPLETED');
+  const value = result._unsafeUnwrap();
+  expect(value.status).toBe('COMPLETED');
 
   // State verification on the Fake
   const saved = await repository.findById(order.id);
@@ -57,7 +57,7 @@ it('should process order successfully when payment is approved', async () => {
 });
 ```
 
-### Pattern 2: Unsafe Unwrap (concise for tests where you expect a specific branch)
+### Pattern 2: Unsafe Unwrap (shorter form for a single value check)
 
 ```typescript
 it('should calculate score when all data is valid', async () => {
@@ -77,7 +77,7 @@ it('should calculate score when all data is valid', async () => {
 });
 ```
 
-### Pattern 3: Match (useful when asserting both branches in related tests)
+### Pattern 3: Match (use `throw`, never `fail()`: Vitest has no `fail`)
 
 ```typescript
 it('should return calculated score when input is valid', async () => {
@@ -94,7 +94,7 @@ it('should return calculated score when input is valid', async () => {
       expect(value.score).toBeGreaterThan(0);
     },
     (error) => {
-      fail(`Expected Ok but got Err: ${error.message}`);
+      throw new Error(`Expected Ok but got Err: ${error.message}`);
     },
   );
 });
