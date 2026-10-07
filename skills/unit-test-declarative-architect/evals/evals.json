@@ -271,6 +271,45 @@
         "Imports vitest-mock-extended and uses setup() with AAA comments"
       ],
       "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "Write Vitest tests for a 'RefundOrder' use case. It loads the order from 'OrderRepository', asks 'PaymentMethodLookup.findByOrderId(orderId)' for the payment method ('CARD' or 'BANK_TRANSFER'), then calls 'PaymentGateway.refund(orderId, amount, reason)'. Card refunds go through immediately and return { status: 'REFUNDED' }; bank transfer refunds return { status: 'PENDING' }. The gateway must be called with the right order id, the full order amount, and the reason given in the input. Use Result types.",
+      "expected_output": "The skill MUST stub the gateway and the lookup per argument (calledWith with the specific orderId, amount and reason, or matchers), not with a blanket mockResolvedValue, so a wrong id, amount or reason makes the test fail. Covers CARD and BANK_TRANSFER outcomes, order not found, and asserts persisted state in an InMemory repository.",
+      "expectations": [
+        "Stubs PaymentGateway.refund with calledWith using the specific orderId, amount and reason (literals or matchers) instead of a blanket mockResolvedValue",
+        "Stubs the payment method lookup per orderId so CARD and BANK_TRANSFER produce different refund outcomes",
+        "Imports mock and matchers from vitest-mock-extended and does not use vi.fn or jest-mock-extended",
+        "Covers the REFUNDED outcome, the PENDING outcome, and order not found, with persisted state asserted on InMemoryOrderRepository",
+        "Uses setup(), AAA comments, and does not assert call order between ports"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "Generate Jest tests for the 'SendInvoiceReminders' use case. For each overdue invoice it sends an email through 'EmailService.send(to, subject, body)' when the customer has an email, or an SMS through 'SmsService.send(phone, text)' when the customer only has a phone. Customers with neither are skipped and reported in the result. The tests must make sure the use case never contacts a channel it should not use for a given customer. Throwing use case, no Result type.",
+      "expected_output": "The skill MUST make unstubbed calls fail loudly: the EmailService and SmsService mocks are strict (a fallback implementation that throws), so an email-only customer triggering an SMS call, or the reverse, fails the test instead of silently returning undefined. Uses jest-mock-extended, covers email, sms, and neither cases.",
+      "expectations": [
+        "Creates the EmailService and SmsService mocks with a fallbackMockImplementation that throws on unstubbed calls",
+        "Stubs only the channel expected in each test, so an unexpected call to the other channel fails the test",
+        "Imports mock from jest-mock-extended and does not use jest.fn for the ports",
+        "Covers email customer, phone-only customer, and customer with neither channel, with no if or for in test bodies",
+        "Uses setup(), AAA comments, and asserts the returned summary or reported skipped customers"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "prompt": "Write Vitest tests for a 'PublishArticle' use case. It loads the article from 'ArticleRepository', marks it as published with the current time from an injected 'Clock', saves it, and then records an audit entry by calling 'AuditLogger.record(event)'. The AuditEvent is built inside the use case (type, articleId, actorId, occurredAt, and a 'changes' object with the previous and new status). Callers cannot see that object, but the audit trail must contain the right data. Use Result types.",
+      "expected_output": "The skill MUST assert the full structure of the AuditEvent the use case passes to AuditLogger.record by capturing the argument (captor) and comparing it with toStrictEqual, including occurredAt from the fixed Clock and the changes object, rather than expect.anything() or objectContaining on a few fields.",
+      "expectations": [
+        "Captures the argument passed to AuditLogger.record using captor from vitest-mock-extended",
+        "Asserts the captured event with toStrictEqual, including type, articleId, actorId, occurredAt and the changes object",
+        "Uses a fixed Clock (injected port or fake timers) so occurredAt is deterministic",
+        "Asserts the published article state on InMemoryArticleRepository and covers article not found",
+        "Uses setup(), AAA comments, imports from vitest-mock-extended, and does not use expect.anything() for the event fields"
+      ],
+      "files": []
     }
   ]
 }
