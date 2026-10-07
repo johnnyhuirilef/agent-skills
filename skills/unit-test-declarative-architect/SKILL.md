@@ -25,6 +25,8 @@ Load when asked to write, extend, or review unit tests for a use case or service
 - Never read the real clock or randomness: inject Clock/ID ports, use fake timers, seed Faker (DET-1, DET-2, DET-3). Await every promise (DET-4, DET-5).
 - A fresh `setup()` per test; restore timers and mocks (DET-8, DET-9).
 - One behavior per test; use `toStrictEqual`; no large snapshots (TST-8, TST-9).
+- Stub with `calledWith` when results depend on arguments (MOCK-3); make mocks strict with `fallbackMockImplementation` when a silent `undefined` could hide a bug (MOCK-5); use `captor` for internally built arguments (MOCK-6).
+- Check the mock library against the installed runner version before installing or upgrading (MOCK-10).
 - Run the suite, then break the SUT or negate an assertion to see each test fail for the right reason, then restore (VER-1 to VER-5). If code cannot be run, say so; never claim green.
 - Challenge the user when the use case violates SRP.
 - Follow the STRICT 2-turn workflow below. Never write the suite in Turn 1.
@@ -35,6 +37,7 @@ Load when asked to write, extend, or review unit tests for a use case or service
 |---|---|
 | Time, dates, randomness, retries, debounce, async | `references/determinism-and-async.md` |
 | Parameterized cases, edge cases, assertions, mock vs fake | `references/test-quality-rules.md` |
+| Argument-dependent stubs, strict mocks, captured arguments, deep mocks, or installing the mock library | `references/mock-library-guide.md` |
 | Suite finished | `references/verify-tests.md` |
 | Use case returns `Result` | `references/result-type-testing.md` |
 | Building factories | `references/factory-template.md` |
@@ -59,6 +62,7 @@ Load when asked to write, extend, or review unit tests for a use case or service
 
 - [determinism-and-async.md](references/determinism-and-async.md)
 - [test-quality-rules.md](references/test-quality-rules.md)
+- [mock-library-guide.md](references/mock-library-guide.md)
 - [verify-tests.md](references/verify-tests.md)
 - [result-type-testing.md](references/result-type-testing.md)
 - [factory-template.md](references/factory-template.md)

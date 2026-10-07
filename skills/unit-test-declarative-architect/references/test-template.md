@@ -50,7 +50,10 @@ describe('ProcessOrder', () => {
     const order = Order.fromPrimitives(orderPrimitives);
     await repository.save(order);
 
-    paymentService.charge.mockResolvedValue({ status: 'SUCCESS' });
+    // Argument-specific stub (see MOCK-3 in mock-library-guide.md)
+    paymentService.charge
+      .calledWith(expect.objectContaining({ amount: 10000 }))
+      .mockResolvedValue({ status: 'SUCCESS' });
 
     // Act
     const result = await useCase.run({ orderId: order.id.value });
