@@ -4,42 +4,62 @@
     {
       "id": 1,
       "prompt": "Here is an Express endpoint for updating a user's bio: `app.post('/api/user/bio', async (req, res) => { let bio = req.body.bio; let userId = req.body.userId; let query = \"UPDATE users SET bio = '\" + bio + \"' WHERE id = \" + userId; await db.execute(query); res.send('OK'); });` Please refactor it to make it production-ready.",
-      "expected_output": "The output must start with the Security Checklist explaining the fixes (SQL injection, IDOR/auth checks, input validation). The code must be declarative TypeScript, using Zod for validation, parameterized queries, UUIDs, and avoiding 'let'."
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must cover SQL injection (parameterized query), IDOR (ownership from the session principal, not body userId), and strict schema validation with unknown keys rejected. The decision logic is a pure function over readonly validated input with no let or in-place mutation, and side effects are isolated in a thin layer (STY rules)."
     },
     {
       "id": 2,
       "prompt": "I need to build a new Node.js/Express service that allows users to download invoices by their ID. Give me the controller code.",
-      "expected_output": "The output must start with the Security Checklist. The code must be in TypeScript, implement rate limiting, UUID validation, ensure the user owns the invoice (A01: Broken Access Control), and use declarative/immutable patterns without side-effects in the core logic."
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must validate the invoice ID, bind owner to the query (not a separate check), return the same response for not-found and no-access, and rate-limit or bound the download."
     },
     {
       "id": 3,
       "prompt": "Review this React component: `function UserComment({ comment }) { return <div className=\"comment-box\" dangerouslySetInnerHTML={{ __html: comment.text }} /> }`",
-      "expected_output": "The output must start with the Security Checklist explaining XSS (Cross-Site Scripting). The refactored code should remove dangerouslySetInnerHTML or use a sanitizer like DOMPurify, written in a declarative React style."
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must address XSS: remove dangerouslySetInnerHTML or sanitize with an allowlist sanitizer such as DOMPurify."
     },
     {
       "id": 4,
       "prompt": "I'm building a feature where users can provide a URL to their portfolio website, and my Express server fetches the metadata (title, description) to display a preview. Here is my code: `app.post('/api/preview', async (req, res) => { const response = await fetch(req.body.url); const text = await response.text(); res.send(text); });` Secure this.",
-      "expected_output": "Security Checklist must address A10: SSRF (Server-Side Request Forgery). The code must validate the URL, prevent fetching local IPs/internal network addresses (127.0.0.1, AWS metadata endpoints), validate the payload with Zod, and handle fetch errors securely without leaking internal network states."
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must address SSRF: allowlist scheme and host, block private, loopback and metadata addresses after DNS resolution, disable or re-validate redirects, bound timeout and size, return only extracted metadata with generic errors."
     },
     {
       "id": 5,
       "prompt": "We need an endpoint to upload user profile pictures. The current code uses multer: `app.post('/upload', upload.single('avatar'), (req, res) => { fs.renameSync(req.file.path, '/uploads/' + req.file.originalname); res.send('Uploaded'); });` Make this bulletproof.",
-      "expected_output": "Checklist must address Path Traversal (Directory Traversal), arbitrary file execution, and DoS. Implementation must rename the file to a generated UUID (discarding originalname), strictly validate MIME types (rejecting SVG/HTML disguised as images), limit file size, and use pure functions for the validation logic."
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must generate the stored filename server-side (discard originalname), verify content type by magic bytes, reject SVG/HTML, limit size, store outside the web root."
     },
     {
       "id": 6,
       "prompt": "Refactor this legacy login endpoint: `app.post('/login', async (req, res) => { const user = await db.collection('users').findOne({ email: req.body.email, password: md5(req.body.password) }); if (user) { res.json({ token: jwt.sign(user, 'secret') }); } else { res.status(401).send('User ' + req.body.email + ' not found or wrong password'); } });`",
-      "expected_output": "Checklist covers Cryptographic Failures (A02), Auth Failures (A07), and Information Leakage. Must replace MD5 with bcrypt/argon2, use HttpOnly/Secure/SameSite cookies instead of returning token in JSON, fix the timing attack/user enumeration vulnerability (generic error messages), and implement auth rate limiting."
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must replace MD5 with Argon2id or bcrypt, use constant-time comparison and a generic error, avoid signing the whole user record with a hardcoded secret, use secure cookie flags, and rate-limit login."
     },
     {
       "id": 7,
       "prompt": "I have a MongoDB search endpoint: `app.post('/search', async (req, res) => { const users = await User.find(req.body.filter); console.log('Search executed by', req.user, 'Result:', users); res.json(users); });` Review and fix.",
-      "expected_output": "Checklist covers NoSQL Injection (A05) and PII Data Leakage (A04). The code must use Zod to strictly define allowed filter fields (preventing `{$gt: ''}` injection payloads), redact or pick specific fields before logging (no PII in logs), and only return public user data (Data Transfer Objects / pure projection functions)."
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must allowlist filter fields and reject operator objects (NoSQL injection), project to public fields, and avoid logging PII or full results."
     },
     {
       "id": 8,
       "prompt": "Here is a fund transfer endpoint: `app.post('/transfer', async (req, res) => { const { fromUserId, toUserId, amount } = req.body; const fromUser = await db.query('SELECT balance FROM accounts WHERE user_id = ' + fromUserId); if (fromUser.balance >= amount) { await db.query('UPDATE accounts SET balance = balance - ' + amount + ' WHERE user_id = ' + fromUserId); await db.query('UPDATE accounts SET balance = balance + ' + amount + ' WHERE user_id = ' + toUserId); res.send('Success'); } else { res.status(400).send('Insufficient funds'); } });` Refactor this completely for a high-security financial system.",
-      "expected_output": "Checklist covers SQL Injection, IDOR (verifying req.user.id == fromUserId), Business Logic Flaws (negative amount injection), Race Conditions/Integrity (A08). Code must be declarative, use Database Transactions (ACID), strict Zod numeric validation (positive, max limits), parameterized queries, and implement an Idempotency Key to prevent double-spending."
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must use a transaction with atomic conditional update, derive fromUserId from the session principal, validate positive bounded amount, use parameterized queries, and add an idempotency key. The decision logic is a pure function over readonly validated input with no let or in-place mutation, and side effects are isolated in a thin layer (STY rules)."
+    },
+    {
+      "id": 9,
+      "prompt": "I'm adding an endpoint that restores a saved report from a client-supplied blob: `app.post('/reports/import', (req, res) => { const report = require('node-serialize').unserialize(req.body.data); saveReport(req.user.id, report); res.json(report); });` Fix it.",
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must remove unsafe deserialization of untrusted data, parse as plain JSON validated by a strict schema, select known fields only, and bound body size."
+    },
+    {
+      "id": 10,
+      "prompt": "We have a multi-tenant Express API with Redis caching: `app.get('/projects/:id', async (req, res) => { const cached = await redis.get('project:' + req.params.id); if (cached) return res.json(JSON.parse(cached)); const p = await db.project.findUnique({ where: { id: req.params.id } }); await redis.set('project:' + req.params.id, JSON.stringify(p)); res.json(p); });` Make it safe.",
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must scope the tenant in the query and in the cache key, authorize per resource inside the data query, set a TTL, and return the same response for not-found and no-access."
+    },
+    {
+      "id": 11,
+      "prompt": "Write a small GitHub Actions workflow plus the npm scripts to publish my TypeScript package to npm on every tag. I want it to be safe.",
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must use least-privilege workflow permissions, pin third-party actions to commit SHAs, avoid long-lived tokens where possible (provenance or trusted publishing), use a lockfile with `npm ci`, and never echo secrets."
+    },
+    {
+      "id": 12,
+      "prompt": "Build me a Node agent that takes a user's request and calls tools: `readFile(path)`, `runSql(query)` and `sendEmail(to, body)` using the Anthropic SDK in a loop. Give me the tool-handling code.",
+      "expected_output": "Starts with a checklist of lines formatted 'ID (A0x): control, attack prevented', then complete TypeScript code. Must treat model output and tool arguments as untrusted input, validate tool arguments with schemas, re-authorize inside each tool handler for the requesting user, allowlist file paths, use read-only parameterized SQL, require confirmation for sending email, and bound loop iterations."
     }
   ]
 }

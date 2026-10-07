@@ -49,9 +49,9 @@ Generate high-quality declarative unit tests with AAA structure, FIRST/DAMP prin
 ---
 
 ### [secure-coding-architect](skills/secure-coding-architect/)
-Enforce OWASP Top 10 (2025) and API security best practices across TypeScript/JavaScript. Generates mandatory security checklists and prevents IDOR, injection, XSS, and SSRF.
+Write and refactor secure TypeScript/JavaScript with ID-tagged rules mapped to OWASP Top 10 (2025). Self-contained: rule references cover injection, auth/sessions, access control, SSRF/uploads/deserialization, config/supply chain/logging, resource limits, tenant isolation, and LLM/agent tools.
 
-**Triggers:** security review, authentication, user input, API endpoint, database query
+**Triggers:** secure code, user input, authentication, API endpoint, database query, file upload, outbound request, multi-tenant, LLM tools
 
 ---
 
@@ -75,7 +75,9 @@ skills/
 │   ├── SKILL.md
 │   └── references/
 ├── secure-coding-architect/
-│   └── SKILL.md
+│   ├── SKILL.md
+│   ├── references/
+│   └── evals/
 └── ddd-typescript-architect/
     ├── SKILL.md
     ├── references/

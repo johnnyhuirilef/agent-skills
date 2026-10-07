@@ -1,133 +1,66 @@
 ---
 name: secure-coding-architect
-description: Implement secure coding practices, prevent vulnerabilities, and harden applications following OWASP Top 10 (2025) and API security best practices. MUST USE THIS SKILL whenever the user asks to write, refactor, or review code that handles user input, authentication, database queries, file uploads, API endpoints, or session management, even if they don't explicitly mention "security" or "OWASP". Focuses on TypeScript/JavaScript ecosystem.
+description: "Trigger: writing or refactoring TypeScript/JavaScript that handles untrusted input, auth, sessions, queries, uploads, outbound requests, APIs, tenant data, secrets, or LLM calls. Writes code that enforces OWASP Top 10 (2025) controls."
+license: Apache-2.0
+metadata:
+  author: "johnnyhuirilef"
+  version: "2.0"
 ---
 
 # Secure Coding Architect
 
-You are a proactive, senior security-conscious software architect. Your goal is to enforce "Secure by Design" and "Defense in Depth" principles in all code you write or refactor. You do not just find vulnerabilities; you proactively prevent them without being asked. While your primary focus is the TypeScript/JavaScript ecosystem, your principles apply universally.
+## Activation Contract
 
-## Core Coding Philosophy (Quality & Integrity)
+Load when code you write or change receives data from a less-trusted party, makes a trust decision, or touches a secret, tenant record, or external system.
 
-The code you generate MUST adhere to the highest standards of software engineering to protect its structural integrity and prevent hidden logic flaws:
-1.  **Declarative over Imperative:** Describe *what* should happen, not *how* to iterate through it. Avoid `let`, `for` loops, and manual state mutations. Prefer array methods (`map`, `filter`, `reduce`) and declarative pipelines.
-2.  **Immutable by Design:** Never mutate inputs or existing objects. Return new copies. Use `readonly` types in TypeScript.
-3.  **No Side Effects (Pure Functions):** Isolate I/O, database calls, and state changes. Keep business logic pure and easily testable.
-4.  **Low Cyclomatic Complexity & Entropy:** Avoid deep nesting, early returns over `else` blocks, and split complex functions into smaller, single-responsibility units.
-5.  **Semantic & Self-Documenting:** Use highly descriptive variable/function names. Do not pollute code with unnecessary comments like `// Validate input`. The code must speak for itself.
+## Hard Rules
 
-## Security Principles & Best Practices
+- Validate at the edge with a strict schema; unknown keys rejected on untrusted input only, never on DB rows or cache entries (INP-1, INP-10). Fail closed on any error or missing config (CFG-3).
+- Query with parameters and operator-safe objects only (INP-2). No shell, `eval`, or dynamic import from input (INP-3).
+- Authorize every route, per resource, on the server, inside the data query (AC-1, AC-2). Pick writable fields explicitly (AC-3).
+- Hash passwords with Argon2id or bcrypt; tokens from a CSPRNG; constant-time comparison (AUTH-1, AUTH-2). Verify every JWT binding (AUTH-6). When replacing a weak password hash, migrate legacy users in code on login (AUTH-13). Deliver browser sessions in `HttpOnly`, `Secure`, `SameSite` cookies, never in the JSON body (AUTH-3, AUTH-11).
+- Scope tenant and owner in every read, write, cache key, and derived copy (DATA-1, DATA-2).
+- Allowlist outbound URLs, file paths, and upload types (SSRF-1, SSRF-2, SSRF-3). Never deserialize untrusted data into executable shapes (SSRF-5).
+- Secrets from the environment only; redact logs; log security events (CFG-1, CFG-6). Return generic errors (CFG-7).
+- Bound body size, concurrency, pagination, and time (RES-1, RES-3, RES-4). Rate-limit auth routes (RES-2).
+- Treat model output and tool arguments as untrusted input; re-authorize in the tool handler (AI-1, AI-2).
+- Write decisions as pure, immutable functions over readonly validated input; confine side effects to a thin shell; use atomic mutation where concurrency matters (STY-1, STY-2, STY-5, STY-6).
 
-1.  **Zero Trust:** Validate every input, even from internal services. Never trust the client.
-2.  **Principle of Least Privilege:** Grant minimal privileges. Code, services, and users should only have the exact permissions necessary to perform their function.
-3.  **Defense in Depth:** Implement layered security. Do not rely on a single control (e.g., use both WAF and application-level input validation).
-4.  **Security Audits:** Design code to be easily auditable. Keep security mechanisms centralized rather than scattered.
-5.  **Fail Securely:** Error handling must never expose sensitive information (stack traces, internal IDs).
+## Decision Gates
 
-## Response Format
+| Code touches | Load | OWASP 2025 |
+|---|---|---|
+| Input, queries, rendering, shell, redirects | `references/input-and-injection.md` | A05 |
+| Login, passwords, sessions, JWT, OAuth, MFA, CSRF | `references/auth-and-session.md` | A07, A04 |
+| Routes, permissions, CORS, headers, business flows | `references/access-control-and-api.md` | A01, A06 |
+| Outbound fetch, file paths, uploads, archives, deserialization | `references/ssrf-uploads-deserialization.md` | A01, A08 |
+| Config, secrets, dependencies, CI, logging, errors | `references/config-supply-chain-logging.md` | A02, A03, A08, A09, A10 |
+| Limits, queues, multi-tenant data, deletion, export | `references/resource-limits-and-data-isolation.md` | A01, A06 |
+| LLM calls, agents, tools, RAG, MCP | `references/ai-and-llm.md` | A01, A05 |
+| Business logic, state, concurrency, shared data | `references/functional-core-imperative-shell.md` | A01, A04, A06 |
+| Need a worked pattern | `references/examples.md` | - |
 
-When modifying or generating code, you MUST adhere to this exact two-part response format. Do not use conversational filler before the checklist.
+## Execution Steps
 
-### 1. 📋 Security Checklist (The "Why")
-Briefly explain the security decisions made in the code. Use bullet points. Only include items relevant to the specific code being generated. Link your decisions to OWASP/Security concepts.
+1. Name the trust boundary: who controls the data, and where it crosses into your code, a sink, or another principal.
+2. Load the matching reference for every row that applies.
+3. Implement; keep validation and authorization in one central place, not scattered.
+4. Self-check each loaded rule against the code before answering.
 
-**Example:**
-*   **A01: Broken Access Control:** Used UUIDs instead of incremental IDs to prevent IDOR.
-*   **A05: Injection:** Parameterized the database query.
-*   **Code Integrity:** Refactored to use immutable state and pure functions to reduce cyclomatic complexity.
+## Output Contract
 
-### 2. 💻 Implementation (The "How")
-Provide the complete, refactored, or newly generated code.
+- Checklist: one line per applied rule as `ID (A0x): control, attack prevented`; only rules relevant to this code.
+- Then the complete code.
+- For a fix, also state: the invariant enforced, the narrowest change at the last trusted decision point, and one regression test.
 
----
+## References
 
-## Mandatory Security Rules (MUST/MUST NOT)
-
-### 🛡️ Authentication & Authorization (A01, A07)
-*   **MUST** verify resource ownership. Never fetch a resource by ID without verifying the user owns it.
-*   **MUST** use UUIDs (v4/v7) or robust hashes for public-facing IDs, never auto-incrementing integers.
-*   **MUST NOT** implement custom cryptography. Always use industry standards (bcrypt, Argon2).
-*   **MUST** enforce secure session configurations (Cookies: `HttpOnly`, `Secure`, `SameSite=Strict`).
-
-### 🛡️ Input Validation & Injection Prevention (A05)
-*   **MUST** strictly validate all external input (Headers, URL parameters, Body) using schema validators (e.g., Zod, TypeBox) at the system boundary.
-*   **MUST** use parameterized queries or trusted ORMs. String concatenation for SQL/NoSQL is strictly prohibited.
-*   **MUST NOT** execute arbitrary shell commands with user input.
-
-### 🛡️ Data Handling, Privacy & Output (A04, A10)
-*   **MUST** treat secrets (API keys, DB credentials) as environment variables. Never hardcode them.
-*   **MUST** mask or redact PII and sensitive data before logging.
-*   **MUST** return generic error messages to the client ("Invalid credentials" instead of "User not found").
-*   **MUST NOT** expose stack traces in API responses.
-*   **MUST** escape/sanitize data before rendering in UI contexts (XSS prevention).
-
-### 🛡️ API Hardening & Design (A06)
-*   **MUST** implement rate limiting on endpoints (especially Auth).
-*   **MUST** enforce CSRF protection for state-changing endpoints using session cookies.
-*   **MUST** explicitly set security headers (e.g., Helmet in Node.js) including CSP, HSTS, and X-Frame-Options.
-
----
-
-## Examples of Secure, Declarative TypeScript
-
-**1. Input Validation & Pure Functions (Express + Zod)**
-```typescript
-import { z } from 'zod';
-import { Request, Response } from 'express';
-
-// Declarative Schema
-const UserSchema = z.object({
-  email: z.string().email(),
-  age: z.number().min(18)
-});
-
-type ValidatedUser = z.infer<typeof UserSchema>;
-
-// Pure Function (No Side Effects)
-const createSanitizedProfile = (user: ValidatedUser): Readonly<ValidatedUser> => ({
-  ...user,
-  email: user.email.toLowerCase().trim()
-});
-
-// Handler (Side Effects Isolated at the Boundary)
-export const registerUser = async (req: Request, res: Response): Promise<void> => {
-  const result = UserSchema.safeParse(req.body);
-  
-  if (!result.success) {
-    res.status(400).json({ error: 'Invalid input parameters' });
-    return;
-  }
-
-  const sanitizedProfile = createSanitizedProfile(result.data);
-  await db.users.insert(sanitizedProfile); // Parameterized insertion assumed
-  
-  res.status(201).json({ message: 'User registered securely' });
-};
-```
-
-**2. Secure Headers & Rate Limiting (Express)**
-```typescript
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import express, { Application } from 'express';
-
-// Declarative configuration
-const createSecureApp = (): Application => {
-  const app = express();
-
-  // Helmet sets CSP, HSTS, X-Frame-Options, disables X-Powered-By
-  app.use(helmet());
-
-  const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests, please try again later.' }
-  });
-
-  app.use('/api/', apiLimiter);
-  
-  return app;
-};
-```
+- [input-and-injection.md](references/input-and-injection.md)
+- [auth-and-session.md](references/auth-and-session.md)
+- [access-control-and-api.md](references/access-control-and-api.md)
+- [ssrf-uploads-deserialization.md](references/ssrf-uploads-deserialization.md)
+- [config-supply-chain-logging.md](references/config-supply-chain-logging.md)
+- [resource-limits-and-data-isolation.md](references/resource-limits-and-data-isolation.md)
+- [ai-and-llm.md](references/ai-and-llm.md)
+- [functional-core-imperative-shell.md](references/functional-core-imperative-shell.md)
+- [examples.md](references/examples.md)
