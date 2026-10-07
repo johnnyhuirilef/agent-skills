@@ -121,5 +121,7 @@ describe('ProcessOrder', () => {
 5. **State verification**: Assert on Fake repository state (`repository.findById`), not just mock call counts.
 6. **Mock the interface**: Use `mock<InterfaceType>()`, never mock concrete implementations.
 7. **Nested describes**: Group related scenarios under `describe('Input Validation')`, `describe('Error Handling')`, etc.
-8. **Zero logic in tests**: No `if`, `for`, or ternary. Complex data belongs in the Factory.
+8. **Zero logic in tests**: No `if`, `for`, or ternary in a test body. Complex data belongs in the Factory; repeated cases use `it.each` with a declarative table.
 9. **Minimum 3 cases**: Happy path + entity not found + business logic error. Add input validation group as needed.
+10. **Deterministic time and async**: Use fake timers for clock-dependent code, await every promise, restore timers in `afterEach` (see `determinism-and-async.md`).
+11. **Many inputs**: Use `it.each` with a declarative table instead of repeated tests (see `test-quality-rules.md`).

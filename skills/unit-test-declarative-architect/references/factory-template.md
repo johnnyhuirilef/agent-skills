@@ -10,8 +10,10 @@ import { Factory } from 'fishery';
 import { ulid } from 'ulid';
 import { type OrderPrimitives } from './order';
 
+faker.seed(123); // reproducible data
+
 export const OrderFactory = Factory.define<OrderPrimitives>(() => {
-  const now = new Date();
+  const now = new Date('2025-01-15T10:00:00Z'); // fixed, never new Date()
 
   return {
     id: faker.string.uuid(),
@@ -68,4 +70,5 @@ const orderWithCustomer = OrderFactory.build({
 2. **Dynamic data**: No hardcoded strings. Use `faker` for every field that doesn't need a specific business value.
 3. **Deterministic IDs**: Use `faker.string.uuid()` for general IDs, `ulid()` for sortable/ordered IDs.
 4. **Minimal overrides**: In tests, only override what the scenario requires. The reader should see at a glance what makes this test case unique.
-5. **One factory per aggregate**: Create one factory per aggregate's primitives type. Compose when needed.
+5. **Seeded and fixed time**: Call `faker.seed(...)` once and use fixed dates, never `new Date()` (see DET-2, DET-3).
+6. **One factory per aggregate**: Create one factory per aggregate's primitives type. Compose when needed.
