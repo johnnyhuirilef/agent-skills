@@ -39,6 +39,31 @@ python3 -I harness.py run projects/v4-auth-1 auth results/v4-auth-1.json
 
 **How to interpret.** `killed` is the main number (out of 10 for each project). A version comparison uses the same number of samples for each use case; the baselines below use 2 samples x 3 use cases = 60 mutants. Check `tests_failed` and `typecheck_ok` too: a suite that does not pass on the base source kills nothing.
 
+### Hard tier
+
+`mutants-hard.json` holds 31 harder mutants (10 for `auth`, 11 for `billing`, 10 for `transfer`) that a reasonable but not exhaustive suite can miss: exact backoff values and order, the exact idempotency key, save order and compensation, fire-and-forget versus awaited side effects, which error becomes the `cause`, the exact log entry, boundary and check-order semantics, and case or whitespace handling. It is a separate file, so the 30-mutant baseline stays comparable. Every hard mutant typechecks and changes behaviour through the use case's public API.
+
+`oracle/<usecase>/` holds specs that pass on `base/src/` and kill every hard mutant (31/31). They are the proof that each mutant is killable, not a model answer: they target only the hard tier.
+
+```bash
+python3 -I harness.py check --mutants mutants-hard.json
+./runall.sh mutants-hard.json                # scores every projects/* dir into results/mutants-hard/<name>.json
+python3 -I harness.py run projects/v4-auth-1 auth results/v4-auth-1.hard.json --mutants mutants-hard.json
+# re-prove the oracle for one use case:
+./new-project.sh oracle-auth-1 && cp -R oracle/auth projects/oracle-auth-1/tests/auth
+python3 -I harness.py run projects/oracle-auth-1 auth results/oracle-auth-1.hard.json --mutants mutants-hard.json
+```
+
+Hard-tier scores of the suites behind the baseline below (`unit-test-declarative-architect`, 2 samples per use case; surviving mutants in brackets):
+
+| Version | auth (of 10) | billing (of 11) | transfer (of 10) | Total |
+|---|---|---|---|---|
+| Original | 5 [HA3 HA4 HA5 HA7 HA8], 5 [HA3 HA4 HA5 HA7 HA8] | 8 [HB5 HB8 HB9], 6 [HB1 HB2 HB5 HB8 HB9] | 6 [HT2 HT3 HT8 HT10], 7 [HT3 HT8 HT10] | 37/62 (60%) |
+| PR #2 before cleanup | 6 [HA3 HA4 HA5 HA8], 8 [HA4 HA5] | 8 [HB2 HB8 HB9], 9 [HB8 HB9] | 6 [HT3 HT6 HT8 HT10], 5 [HT2 HT3 HT6 HT8 HT10] | 42/62 (68%) |
+| PR #2 after cleanup | 5 [HA3 HA4 HA5 HA6 HA8], 5 [HA3 HA4 HA5 HA6 HA8] | 9 [HB8 HB9], 9 [HB8 HB9] | 6 [HT2 HT3 HT8 HT10], 6 [HT2 HT3 HT8 HT10] | 40/62 (65%) |
+
+The hard tier removes the ceiling (60-68% instead of 97%), but the gap between versions is 3 to 5 mutants with 2 samples, so it does not yet show that one version is better. HA4, HA5, HB8, HB9, HT3, HT8 and HT10 survived in all 6 suites of their use case; 15 hard mutants were killed by all 18 suites and do not separate versions.
+
 ## ddd-skill
 
 **What it measures.** Fixed cases in `cases/<ID>/` (`prompt.txt` is the user request, `truth.json` is the answer key):

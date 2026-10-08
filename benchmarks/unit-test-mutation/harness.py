@@ -1,7 +1,9 @@
 """Mutation harness. Usage:
-  python3 -I harness.py check                       # verify every mutant applies uniquely to base
-  python3 -I harness.py run <project_dir> <usecase> <out.json>
-<usecase> is a key of mutants.json (auth | billing | transfer). Only <project_dir>/tests is used;
+  python3 -I harness.py check [--mutants <file>]    # verify every mutant applies uniquely to base
+  python3 -I harness.py run <project_dir> <usecase> <out.json> [--mutants <file>]
+--mutants defaults to mutants.json (the 30-mutant baseline); mutants-hard.json is the hard tier.
+A relative --mutants path is resolved against the current directory first, then this directory.
+<usecase> is a key of the mutants file (auth | billing | transfer). Only <project_dir>/tests is used;
 src/ and config always come from base/, so edits a candidate made to src/ never leak into the score.
 A mutant is killed when a test that passes on the unmutated source fails (or disappears) under the mutant.
 """
@@ -10,7 +12,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.join(HERE, "base")
-MUTANTS = json.load(open(os.path.join(HERE, "mutants.json")))
+
+
+def load_mutants(path):
+    if not os.path.isabs(path) and not os.path.exists(path):
+        path = os.path.join(HERE, path)
+    return json.load(open(path))
 
 
 def apply(src, m):
@@ -57,17 +64,26 @@ def typecheck(d):
 
 
 def main():
-    if not (sys.argv[1:2] == ["check"] and len(sys.argv) == 2) and not (sys.argv[1:2] == ["run"] and len(sys.argv) == 5):
+    args = sys.argv[1:]
+    mutants_file = "mutants.json"
+    if "--mutants" in args:
+        i = args.index("--mutants")
+        if i + 1 >= len(args):
+            print(__doc__); sys.exit(2)
+        mutants_file = args[i + 1]
+        del args[i:i + 2]
+    if not (args[:1] == ["check"] and len(args) == 1) and not (args[:1] == ["run"] and len(args) == 4):
         print(__doc__); sys.exit(2)
+    MUTANTS = load_mutants(mutants_file)
     os.makedirs(os.path.join(HERE, "tmp"), exist_ok=True)
-    if sys.argv[1] == "check":
+    if args[0] == "check":
         for uc, spec in MUTANTS.items():
             src = open(os.path.join(BASE, spec["file"])).read()
             for m in spec["mutants"]:
                 apply(src, m)
-        print("all", sum(len(s["mutants"]) for s in MUTANTS.values()), "mutants apply uniquely")
+        print("all", sum(len(s["mutants"]) for s in MUTANTS.values()), "mutants in", os.path.basename(mutants_file), "apply uniquely")
         return
-    project, uc, outp = sys.argv[2], sys.argv[3], sys.argv[4]
+    project, uc, outp = args[1], args[2], args[3]
     spec = MUTANTS[uc]
     src = open(os.path.join(BASE, spec["file"])).read()
 
@@ -77,7 +93,8 @@ def main():
     shutil.rmtree(d, ignore_errors=True)
     passing = {k for k, v in base["tests"].items() if v == "passed"}
     result = {
-        "project": os.path.basename(project), "usecase": uc,
+        "project": os.path.basename(os.path.normpath(project)), "usecase": uc,
+        "mutants_file": os.path.basename(mutants_file),
         "tests_total": len(base["tests"]), "tests_passed": len(passing),
         "tests_failed": sum(1 for v in base["tests"].values() if v == "failed"),
         "timeout": base["timeout"], "typecheck_ok": tc_ok, "typecheck_error_lines": tc_lines,
@@ -95,7 +112,7 @@ def main():
         result["mutants"] = list(ex.map(one, spec["mutants"]))
     result["killed"] = sum(1 for m in result["mutants"] if m["killed"])
     json.dump(result, open(outp, "w"), indent=2)
-    print(os.path.basename(project), uc, f"tests {len(passing)}/{len(base['tests'])} pass; killed {result['killed']}/{len(spec['mutants'])}; typecheck_ok={tc_ok}")
+    print(os.path.basename(os.path.normpath(project)), uc, f"tests {len(passing)}/{len(base['tests'])} pass; killed {result['killed']}/{len(spec['mutants'])}; typecheck_ok={tc_ok}")
 
 
 main()
