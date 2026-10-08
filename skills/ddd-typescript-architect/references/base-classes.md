@@ -2,6 +2,8 @@ Load when: writing or reviewing code that extends ValueObject, Entity, Aggregate
 
 # Shared Domain Kernel
 
+**If the user's project already has its own kernel** (their `ValueObject`, `Entity`, `Clock`, `DomainDeps`), follow it and do not redefine it. Where it differs from this file (for example `value` is `protected`), read through the accessors it offers (getters, `toPrimitives()`) and list each difference under Assumptions. The definitions below are the default when no kernel exists.
+
 The kernel is the one place these base types are defined. It lives in `src/kernel/domain/` (not a business Module: no layers, no business concepts, only the types below plus `DomainError`, see `domain-errors.md`). Never name it `shared` or `common`.
 
 ## Time and ids

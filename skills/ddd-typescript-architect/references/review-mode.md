@@ -22,7 +22,7 @@ Report each defect at its own table severity (`anti-patterns.md`). Never escalat
 
 For a "refactor" request: review the existing code briefly (findings only, no grilling question), then switch to Implementation mode (`implementation-mode.md`).
 
-Non-interactive fallback (evaluation, CI, subagent, or no user can answer): state assumptions in one short list, deliver the full report, and omit the Grilling Loop question. Never stop to wait.
+Non-interactive fallback (evaluation, CI, subagent, or the prompt says no user can answer): state assumptions in one short list, deliver the full report, and omit the Grilling Loop question. Never stop to wait. If the user's message explicitly asks for the confirmation question, include it.
 
 ## Report template
 

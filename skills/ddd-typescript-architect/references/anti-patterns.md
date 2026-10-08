@@ -27,7 +27,7 @@ Report each defect at its own table severity. Never escalate a finding because o
 | AP-10 | VO with public mutable field | Non-`readonly` field on a Value Object | BLOCKER | VO-1 |
 | AP-11 | VO compared by reference | `===` or `==` between Value Objects | BLOCKER | VO-2 |
 | AP-12 | Mutable event payload | Event fields or payload not `readonly` | BLOCKER | EV-1 |
-| AP-13 | Garbage Module name | Module or folder named `utils`, `helpers`, `shared`, `events` or `common` | BLOCKER | MOD-2 |
+| AP-13 | Garbage Module name | Business Module named `utils`, `helpers`, `shared`, `events` or `common` (the `domain/events/` and `domain/errors/` folders INSIDE a module are correct, see MOD-9) | BLOCKER | MOD-2 |
 | AP-14 | Domain depends outward | `domain/` imports from `application`, `infrastructure`, `presentation`, ORM or framework | BLOCKER | MOD-5 |
 | AP-15 | Events published from inside an Aggregate | Aggregate calls `publish` or `emit` | CRITICAL | EV-8 |
 | AP-16 | EventBus injected into an Aggregate or Entity | Bus or publisher in a domain constructor or field | CRITICAL | EV-8 |

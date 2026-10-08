@@ -83,7 +83,7 @@ Every rule is MUST / MUST NOT unless it says SHOULD. Cite rules by ID. Kernel ty
 | ID | Rule | Failure it prevents |
 |---|---|---|
 | MOD-1 | At most 4 base folders: `domain`, `application`, `presentation`, `infrastructure`. | Layer sprawl |
-| MOD-2 | Names MUST come from Ubiquitous Language. `utils`, `helpers`, `shared`, `events`, `common` are BLOCKER names. | Garbage-collector modules |
+| MOD-2 | Names MUST come from Ubiquitous Language. `utils`, `helpers`, `shared`, `events`, `common` are BLOCKER names for a business Module; `domain/events/` and `domain/errors/` folders inside a module are fine (MOD-9). | Garbage-collector modules |
 | MOD-3 | Names SHOULD NOT contain "and" or be pattern names (`strategy`, `factory`). | Mixed responsibilities |
 | MOD-4 | Dependencies between Modules MUST be unidirectional and acyclic. | Cyclic coupling |
 | MOD-5 | `domain` imports nothing; `application` imports `domain`; `presentation` imports `application` and `domain`; `infrastructure` imports all. | Inverted dependencies |
