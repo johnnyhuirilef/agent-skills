@@ -1,68 +1,68 @@
+Load when: defining, emitting, versioning or publishing Domain Events, or writing the Application Service that persists and publishes them.
+
 # Domain Event Patterns
+
+Rules: `EV-1` to `EV-11` in `hard-rules.md`. The `DomainEvent` base class and the `fromPrimitives` convention are in `base-classes.md`.
 
 ## Naming convention
 
 ```
-<bounded-context>.<event-name-kebab-case>.<version>
+<context>.<event-name>.v<N>
 
-Examples:
-  agreements.agreement-version-activated.v1
-  auth.client-app-secret-rotated.v1
-  products.product-published.v1
-  payments.payment-failed.v1
+agreement.agreement-activated.v1
+auth.client-app-secret-rotated.v1
+product.product-published.v1
+payment.payment-failed.v1
 ```
 
-Rules:
-- Context is the module name in singular (not plural)
-- Event name is past tense, kebab-case
-- Version starts at `v1`, increments on breaking payload changes
-- Breaking = removing a field, renaming a field, changing a field type
-- Non-breaking = adding an optional field (keep same version or bump minor if you track that)
+- Context is the Module name (singular, lowercase); event name is past tense, kebab-case
+- Class name is PascalCase without `Event` suffix: `AgreementActivated`
+- Adding an optional field is non-breaking only for tolerant readers
+- Never rename a field or change its meaning; any other change bumps `vN`
 
-## Canonical abstract base
+## Concrete event
 
 ```typescript
-// domain/events/domain-event.base.ts
-abstract class DomainEvent<Payload = unknown> {
-  static readonly EVENT_NAME: string; // overridden in subclass
-
-  abstract readonly payload: Payload;
-  abstract readonly eventName: string;
-  abstract readonly occurredAt: Date;
-
-  // Required for deserialization from message broker / event store
-  abstract fromPrimitives(data: unknown): DomainEvent<Payload>;
-}
-```
-
-## Concrete event example
-
-```typescript
-// domain/events/agreement-activated.event.ts
+// domain/events/agreement-activated.ts
 type AgreementActivatedPayload = {
   agreementId: string;
   version: number;
-  activatedAt: string; // ISO string — primitives only in event payload
+  activatedAt: string; // ISO string: primitives only in event payloads
 };
 
-class AgreementActivatedEvent extends DomainEvent<AgreementActivatedPayload> {
-  static readonly EVENT_NAME = 'agreements.agreement-version-activated.v1';
+class AgreementActivated extends DomainEvent<AgreementActivatedPayload> {
+  static readonly EVENT_NAME = 'agreement.agreement-activated.v1';
+  readonly eventName = AgreementActivated.EVENT_NAME;
 
-  readonly eventName = AgreementActivatedEvent.EVENT_NAME;
-  readonly occurredAt: Date;
-
-  constructor(readonly payload: AgreementActivatedPayload) {
-    super();
-    this.occurredAt = new Date();
-  }
-
-  fromPrimitives(data: unknown): AgreementActivatedEvent {
-    return new AgreementActivatedEvent(data as AgreementActivatedPayload);
+  static fromPrimitives(data: EventPrimitives<AgreementActivatedPayload>): AgreementActivated {
+    return new AgreementActivated(data.payload, new Date(data.occurredAt));
   }
 }
 ```
 
-## EventBus port (generic — not tied to any library)
+The aggregate passes `occurredAt` from its clock.
+
+## Emitting from the aggregate
+
+```typescript
+activate(deps: DomainDeps = systemDeps): void {
+  if (this.status !== AgreementStatus.DRAFT) {
+    throw new InvalidStateTransitionError(this.status, AgreementStatus.ACTIVE);
+  }
+  const now = deps.clock.now();
+  this.status = AgreementStatus.ACTIVE;
+  this.addDomainEvent(
+    new AgreementActivated(
+      { agreementId: this.id.value, version: this.version.value, activatedAt: now.toISOString() },
+      now,
+    ),
+  );
+}
+```
+
+Every event class you define must be emitted by some aggregate method (`EV-10`).
+
+## EventBus port
 
 ```typescript
 // domain/port/event-bus.port.ts
@@ -71,63 +71,54 @@ abstract class EventBusPort<Event extends DomainEvent = DomainEvent> {
 }
 ```
 
-Inject EventBusPort via DI in the Application layer — never in the domain layer.
+Inject `EventBusPort` in the Application layer only.
 
-## Full Application Service flow
+## Application Service: load, act, persist, drain, publish
 
 ```typescript
-// application/handlers/activate-agreement.handler.ts
+// application/command/activate-agreement.handler.ts
 class ActivateAgreementHandler {
   constructor(
     private readonly repo: AgreementRepositoryPort,
-    private readonly eventBus: EventBusPort<AgreementDomainEvent>,
+    private readonly eventBus: EventBusPort<AgreementEvent>,
   ) {}
 
   async execute(command: ActivateAgreementCommand): Promise<void> {
-    const agreement = await this.repo.findById(command.id);
+    const agreement = await this.repo.findById(new AgreementId(command.id));
 
-    agreement.activate(); // ← Aggregate adds event to internal list
+    agreement.activate(); // the aggregate adds the event internally
 
-    await this.repo.save(agreement); // ← persist first
+    await this.repo.save(agreement); // persist FIRST
 
-    const events = agreement.pullDomainEvents(); // ← drain (destructive)
-    await this.eventBus.publish(events); // ← publish after persist
+    const events = agreement.pullDomainEvents(); // ONE call, drained after save
+    await this.eventBus.publish(events);          // publish after persist
   }
 }
 ```
 
-> Persist THEN publish. If you publish before persist and the save fails, you've emitted a lie. If you persist and publish fails, the event is re-publishable (idempotency is the consumer's job).
+Persist THEN publish integration events: publishing first and failing to save emits an event for state that does not exist. In-process domain-event handlers MAY run before commit when their side effects must share the transaction; record that choice in the Decision Log. `pullDomainEvents()` is destructive; a second call returns `[]`.
+
+**Delivery guarantee.** A crash between `save` and `publish` loses the drained events. Outbox: write the event to an outbox table in the SAME transaction as the aggregate save and relay it from there. Delivery is then at-least-once, so consumers must be idempotent. Without an outbox, delivery is at-most-once.
 
 ## Typed event registry
 
-When a module has multiple domain events, group them with a union type:
-
 ```typescript
 // domain/events/index.ts
-type AgreementDomainEvent =
-  | AgreementCreatedEvent
-  | AgreementActivatedEvent
-  | AgreementArchivedEvent;
+type AgreementEvent = AgreementCreated | AgreementActivated | AgreementArchived;
 ```
 
-Use this union as the generic parameter for `EventBusPort<AgreementDomainEvent>` — narrows what can be published from this context.
+Use the union as the aggregate's event generic and the `EventBusPort` parameter.
 
-## Event versioning migration
+## Domain vs integration events
 
-When a payload change is breaking:
+Same semantics, different implementation. Domain events are in-process, raised by the aggregate, handled in the application layer, sync or async. Integration events cross context or service boundaries, are always async, are published only after commit, and are built by an application handler from a domain event.
 
-1. Create a new event class: `AgreementActivatedV2Event` with `EVENT_NAME = '...v2'`
-2. Keep the old event handler alive until all consumers are migrated
-3. The Aggregate produces v2 going forward — old consumers handle v1 until deprecated
-4. Never mutate an existing versioned event class
+## Versioning a breaking change
 
-## Anti-patterns
+1. New class, for example `AgreementActivatedV2`, with `EVENT_NAME = 'agreement.agreement-activated.v2'`
+2. Keep the old handler until every consumer has migrated
+3. The aggregate emits v2 from now on
 
-| Anti-pattern | Severity | Why |
-|---|---|---|
-| Missing `fromPrimitives()` | WARNING | Breaks deserialization from message broker |
-| Event name without version suffix | WARNING | Breaks backward compatibility on payload change |
-| Publishing from inside Aggregate | CRITICAL | Domain has side effects — violates purity |
-| Injecting EventBus into Aggregate | CRITICAL | Domain depending on infrastructure |
-| Mutable event payload fields | BLOCKER | Events must be immutable records of the past |
-| `new Date()` inside event without Clock port | WARNING | Not deterministic in tests |
+Upcasting old events on read is an alternative to bumping `vN`.
+
+Violations and severities: `anti-patterns.md` (AP-12, AP-15, AP-16, AP-21, AP-26, AP-27, AP-29, AP-41).

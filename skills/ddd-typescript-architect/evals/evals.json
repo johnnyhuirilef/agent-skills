@@ -4,10 +4,17 @@
     "description": "Detects TypeORM @Entity() used on a domain-layer Value Object",
     "input": "I have this class in my domain folder:\n@Entity()\nclass Money {\n  @Column() amount: number;\n  @Column() currency: string;\n}",
     "expected_behaviors": [
-      "Identifies the CARDINAL ERROR of mixing TypeORM @Entity() with a DDD Value Object",
-      "Explains that TypeORM @Entity() is a persistence mapper, not a DDD concept",
+      "Identifies the ORM @Entity() decorator on a domain class as a layering breach",
+      "Explains that persistence mapping does not belong in the domain layer; map it in infrastructure",
       "Proposes a split: domain Money VO + infrastructure MoneyDAO",
       "Provides BLOCKER severity"
+    ],
+    "expectations": [
+      "Runs in Review mode and produces a report with the sections Pattern(s) Detected, Layer Analysis, Findings, Recommendation",
+      "Reports the ORM @Entity() on a domain class as BLOCKER (AP-1) with the reason that persistence mapping belongs in infrastructure",
+      "Proposes a domain Money Value Object extending ValueObject plus a separate infrastructure MoneyDAO",
+      "Every finding has Evidence, Why and Fix fields",
+      "Recommendation is REDESIGN"
     ]
   },
   {
@@ -18,6 +25,13 @@
       "Flags private result: Money as BLOCKER",
       "Explains Node.js singleton shared state risk",
       "Shows correct approach: return computed value instead of storing it"
+    ],
+    "expectations": [
+      "Flags the mutable `result: Money` field as BLOCKER (DS-1 / AP-2)",
+      "Explains that a Node.js singleton shares the field across requests",
+      "Flags `this.result = ...` as BLOCKER (AP-4) or folds it into the same finding without escalating severity",
+      "Fix returns the computed value instead of storing it on this",
+      "Recommendation is REDESIGN"
     ]
   },
   {
@@ -28,18 +42,34 @@
       "Identifies Anemic Domain Model anti-pattern",
       "Flags public mutable fields on Entity",
       "Proposes moving the locking and balance logic into BankAccount methods",
-      "Marks as BLOCKER"
+      "Marks as CRITICAL (a context with real business rules)"
+    ],
+    "expectations": [
+      "Reports the anemic BankAccount (public fields, no behavior) as CRITICAL (AP-5 / ENT-4), not BLOCKER",
+      "Reports the missing or bare primitive identity, if mentioned, as WARNING (AP-19 / ENT-1, a convention) at its own table severity",
+      "Fix moves the locking and balance logic into BankAccount methods that validate state",
+      "Fix replaces `return new Error('locked')` with a DomainBusinessError thrown from the entity",
+      "Recommendation is REFACTOR because the worst finding is CRITICAL and there is no BLOCKER"
     ]
   },
   {
     "id": "correct-aggregate-structure",
-    "description": "Approves a correctly structured Aggregate",
-    "input": "class CustomerAccount {\n  constructor(private readonly id: string, private accounts: BankAccount[]) {}\n  addMoney(amount: number, currency: Currency): void {\n    if (this.accounts.every(a => !a.isForCurrency(currency))) throw new Error('no account for currency');\n    this.accounts = this.accounts.map(a => a.isForCurrency(currency) ? a.addMoney(amount) : a);\n  }\n}\nclass BankAccount {\n  constructor(private readonly id: string, private readonly currency: Currency, private balance: number) {}\n  isForCurrency(c: Currency): boolean { return this.currency.isEqual(c); }\n  addMoney(amount: number): BankAccount { return new BankAccount(this.id, this.currency, this.balance + amount); }\n}",
+    "description": "Approves a correctly structured Aggregate without inventing findings",
+    "input": "Review this module code (kernel types ValueObject, Entity, AggregateRoot, DomainEvent, DomainDeps, systemDeps come from our kernel; ensureValid* are validation helpers that throw DomainValidationError):\n\nclass Money extends ValueObject<{ amount: number; currency: Currency }> {\n  constructor(amount: number, currency: Currency) {\n    super(ensureValidMoney({ amount, currency }));\n  }\n  add(other: Money): Money {\n    return new Money(this.value.amount + other.value.amount, this.value.currency);\n  }\n}\n\nclass CustomerAccountId extends ValueObject<string> {\n  constructor(value: string) { super(ensureValidId(value)); }\n}\nclass BankAccountId extends ValueObject<string> {\n  constructor(value: string) { super(ensureValidId(value)); }\n}\n\nclass CustomerAccountOpened extends DomainEvent<{ accountId: string }> {\n  static readonly EVENT_NAME = 'customer.customer-account-opened.v1';\n  readonly eventName = CustomerAccountOpened.EVENT_NAME;\n  static fromPrimitives(data: EventPrimitives<{ accountId: string }>): CustomerAccountOpened {\n    return new CustomerAccountOpened(data.payload, new Date(data.occurredAt));\n  }\n}\ntype CustomerAccountEvent = CustomerAccountOpened;\n\nclass CustomerAccount extends AggregateRoot<CustomerAccountId, CustomerAccountEvent> {\n  private constructor(id: CustomerAccountId, private accounts: BankAccount[]) {\n    super(id);\n  }\n\n  static create(id: CustomerAccountId, deps: DomainDeps = systemDeps): CustomerAccount {\n    const account = new CustomerAccount(id, []);\n    account.addDomainEvent(new CustomerAccountOpened({ accountId: id.value }, deps.clock.now()));\n    return account;\n  }\n\n  static restore(snapshot: CustomerAccountSnapshot): CustomerAccount {\n    return new CustomerAccount(\n      new CustomerAccountId(snapshot.id),\n      snapshot.accounts.map(BankAccount.restore),\n    );\n  }\n\n  openAccountForCurrency(currency: Currency, deps: DomainDeps = systemDeps): void {\n    if (this.accounts.some((a) => a.isForCurrency(currency))) {\n      throw new DomainBusinessError('There is already an account for that currency');\n    }\n    const id = new BankAccountId(deps.idGenerator.generate());\n    this.accounts = [...this.accounts, BankAccount.open(id, currency)];\n  }\n\n  addMoney(amount: Money): void {\n    const currency = amount.value.currency;\n    if (!this.accounts.some((a) => a.isForCurrency(currency))) {\n      throw new DomainBusinessError('No account for that currency');\n    }\n    this.accounts = this.accounts.map((a) => (a.isForCurrency(currency) ? a.addMoney(amount) : a));\n  }\n\n  toPrimitives(): CustomerAccountSnapshot {\n    return { id: this.id.value, accounts: this.accounts.map((a) => a.toPrimitives()) };\n  }\n}\n\nclass BankAccount extends Entity<BankAccountId> {\n  private constructor(id: BankAccountId, private readonly currency: Currency, private readonly balance: Money) {\n    super(id);\n  }\n  static open(id: BankAccountId, currency: Currency): BankAccount {\n    return new BankAccount(id, currency, new Money(0, currency));\n  }\n  static restore(snapshot: BankAccountSnapshot): BankAccount {\n    const currency = new Currency(snapshot.currency);\n    return new BankAccount(new BankAccountId(snapshot.id), currency, new Money(snapshot.balance, currency));\n  }\n  isForCurrency(c: Currency): boolean { return this.currency.isEqual(c); }\n  addMoney(amount: Money): BankAccount { return new BankAccount(this.id, this.currency, this.balance.add(amount)); }\n  toPrimitives(): BankAccountSnapshot {\n    return { id: this.id.value, currency: this.currency.value, balance: this.balance.value.amount };\n  }\n}",
     "expected_behaviors": [
-      "Identifies CustomerAccount as Aggregate Root with Global Identity",
-      "Identifies BankAccount as internal Entity with Local Identity",
-      "Notes correct immutable update pattern in addMoney",
-      "Approves the structure or provides only minor suggestions"
+      "Identifies CustomerAccount as Aggregate Root with global identity",
+      "Identifies BankAccount as an internal Entity with local identity (a Value Object id)",
+      "Notes private constructors with create (emits event) and restore (emits none)",
+      "Notes time and ids come from DomainDeps and the event is versioned with a static fromPrimitives",
+      "Verdict is APPROVE; no BLOCKER, CRITICAL or WARNING findings are invented"
+    ],
+    "expectations": [
+      "Recommendation is APPROVE",
+      "Findings contain no BLOCKER, CRITICAL or WARNING entries",
+      "At most 3 SUGGESTIONs, each tied to a rule or table row, or Findings says None",
+      "Does not ask a Grilling Loop question because the verdict is APPROVE",
+      "Does not flag the string-backed value of the id Value Objects as a bare primitive id",
+      "Does not flag aggregate size by method or entity count (AP-23 has no count trigger)"
     ]
   },
   {
@@ -47,11 +77,106 @@
     "description": "Detects bad module names",
     "input": "My project structure is:\nsrc/\n  utils/\n  events/\n  shoppingAndCustomer/\n  strategy/",
     "expected_behaviors": [
-      "Flags utils as CRITICAL with explanation",
-      "Flags events as CRITICAL — events belong inside their own module",
-      "Flags shoppingAndCustomer as WARNING — and signals two responsibilities",
-      "Flags strategy as WARNING — design pattern name, not business name",
+      "Flags utils as CRITICAL with explanation (AP-13)",
+      "Flags events as CRITICAL because events belong inside their own module (AP-13)",
+      "Flags shoppingAndCustomer as WARNING because 'and' signals two responsibilities (AP-40)",
+      "Flags strategy as WARNING because it is a design pattern name, not a business name (AP-40)",
       "Proposes business-language alternatives"
+    ],
+    "expectations": [
+      "utils is reported as CRITICAL, not BLOCKER",
+      "events is reported as CRITICAL, not BLOCKER",
+      "shoppingAndCustomer and strategy are each reported as WARNING",
+      "Recommendation is REFACTOR because the worst finding is CRITICAL and there is no BLOCKER",
+      "Each finding names a business-language replacement or split"
+    ]
+  },
+  {
+    "id": "implementation-single-value-object",
+    "description": "Implementation mode with the gate pre-answered: a single Value Object, no questions, no Turn 1 stop",
+    "input": "Context: bounded context `billing`, no aggregate involved, no events. Implement an `Iban` value object that rejects malformed IBANs and exposes the country code. I already answered every question you need, just write it.",
+    "expected_behaviors": [
+      "Runs in Implementation mode without asking any gate question",
+      "Skips the Turn 1 STOP because the request is a single Value Object",
+      "Iban extends ValueObject, validates through a helper called from the constructor and throws DomainValidationError",
+      "Does not ask about Domain Events and does not create any",
+      "Prints at most a short Decision Log and no checklist boxes for items that are met"
+    ],
+    "expectations": [
+      "The response contains code and no clarifying question",
+      "Iban extends ValueObject<string> and every field is readonly",
+      "Validation runs inside the constructor path and throws DomainValidationError, never the built-in Error",
+      "The code contains no system clock call and no ORM decorator",
+      "Any DDD Decision Log has one line per real decision; the checklist, if printed, lists only unmet or not-applicable items"
+    ]
+  },
+  {
+    "id": "non-interactive-review",
+    "description": "Review in a non-interactive run: assumptions stated, full report, no blocking question",
+    "input": "[non-interactive run, no human will answer] Review this domain code and return the report.\n\nclass OrderService {\n  private lastOrder: Order;\n  async place(order: Order) {\n    this.lastOrder = order;\n    order.placedAt = new Date();\n    throw new Error('not allowed');\n  }\n}",
+    "expected_behaviors": [
+      "States assumptions in a short list and does not wait for an answer",
+      "Produces the full report template with Pattern(s) Detected, Layer Analysis, Findings and Recommendation",
+      "Reports the stateful field as BLOCKER and the raw Error and system clock use as WARNING",
+      "Recommendation is REDESIGN",
+      "Does not end with a blocking question"
+    ],
+    "expectations": [
+      "The response contains the report sections in order and a Recommendation line",
+      "Findings are ordered BLOCKER before WARNING",
+      "The `lastOrder` field is reported as BLOCKER (DS-1) and the raw `Error` and `new Date()` at WARNING each, without escalating",
+      "Each finding includes Evidence, Why and Fix",
+      "The response does not stop to wait for user input"
+    ]
+  },
+  {
+    "id": "question-aggregate-vs-entity",
+    "description": "Question mode: concept explanation gets a direct answer with no mode, no report and no gates",
+    "input": "What is the difference between an Entity and an Aggregate in DDD?",
+    "expected_behaviors": [
+      "Answers directly and concisely",
+      "Explains that an Entity has identity and behavior while an Aggregate is a consistency boundary around entities and value objects with one root",
+      "Does not announce a mode and does not produce a review report",
+      "Does not ask gate questions or a Grilling Loop question"
+    ],
+    "expectations": [
+      "The response has no '## DDD Review' heading and no Recommendation verdict",
+      "The response does not state that it is in Review or Implementation mode",
+      "The response distinguishes identity (Entity) from consistency boundary and single root (Aggregate)",
+      "The response asks no clarifying question",
+      "The response is short and does not generate a full implementation"
+    ]
+  },
+  {
+    "id": "db-assigned-id-tradeoff",
+    "description": "Review of an aggregate with a DB-assigned auto-increment id: a trade-off WARNING, not CRITICAL",
+    "input": "Review this domain code:\n\nclass Invoice extends AggregateRoot<InvoiceId, InvoiceEvent> {\n  private constructor(id: InvoiceId, private lines: InvoiceLine[], private status: InvoiceStatus) {\n    super(id);\n  }\n  static restore(snapshot: InvoiceSnapshot): Invoice {\n    return new Invoice(new InvoiceId(snapshot.id), snapshot.lines.map(InvoiceLine.restore), new InvoiceStatus(snapshot.status));\n  }\n  addLine(line: InvoiceLine): void {\n    if (this.status.isClosed()) throw new DomainBusinessError('Invoice is closed');\n    this.lines = [...this.lines, line];\n  }\n}\n\n// infrastructure/adapter/database/invoice.dao.ts\n@Entity()\nclass InvoiceDAO {\n  @PrimaryGeneratedColumn() id: number; // auto-increment, InvoiceId wraps this value after the first insert\n}",
+    "expected_behaviors": [
+      "Notes the database-assigned auto-increment id as a trade-off, not a defect",
+      "Mentions the cost: no id at creation, events and commands cannot reference it, retries cannot be deduplicated",
+      "Does not flag the ORM decorator on the DAO in infrastructure"
+    ],
+    "expectations": [
+      "Reports the DB-assigned id (AP-18 / ENT-7) as WARNING, not CRITICAL or BLOCKER",
+      "The finding describes the trade-off (no id at creation, events and commands cannot reference it, retries cannot be deduplicated) and offers application-generated ids as the alternative",
+      "Does not report the @Entity() on InvoiceDAO as AP-1 because it lives in infrastructure",
+      "Recommendation is APPROVE or REFACTOR (at most 2 WARNINGs allows APPROVE), never REDESIGN"
+    ]
+  },
+  {
+    "id": "integration-event-after-commit-not-a-defect",
+    "description": "A reviewer must not flag an integration event published after the aggregate is persisted",
+    "input": "Review this application handler:\n\nclass ShipOrderHandler {\n  constructor(private readonly repo: OrderRepositoryPort, private readonly eventBus: EventBusPort<OrderEvent>) {}\n\n  async execute(command: ShipOrderCommand): Promise<void> {\n    const order = await this.repo.findById(new OrderId(command.id));\n    order.ship();\n    await this.repo.save(order);\n    const events = order.pullDomainEvents();\n    await this.eventBus.publish(events);\n  }\n}",
+    "expected_behaviors": [
+      "Recognizes load, behavior, save, pullDomainEvents, publish as the correct order",
+      "Does not report publishing after save as a defect",
+      "May mention the outbox as an optional delivery-guarantee improvement at most as a SUGGESTION"
+    ],
+    "expectations": [
+      "No finding on publishing the events after save (AP-21 does not apply)",
+      "Recommendation is APPROVE",
+      "At most 3 SUGGESTIONs and no BLOCKER, CRITICAL or WARNING findings",
+      "Does not ask a Grilling Loop question because the verdict is APPROVE"
     ]
   }
 ]
