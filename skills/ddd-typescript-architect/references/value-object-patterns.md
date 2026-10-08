@@ -1,131 +1,111 @@
+Load when: writing or reviewing a Value Object, composing VOs, grouping VOs in a ContextObject, building a composite identity, or choosing VO vs primitive.
+
 # Value Object Patterns
 
-## Composition — VO containing another VO
+Rules: `VO-1` to `VO-9` in `hard-rules.md`. `ValueObject<T>` and `ToPrimitives<T>` are defined in `base-classes.md` (`value` is `public readonly`).
+
+## Validation helper
+
+The constructor calls a helper and passes the result to `super`. Validation knowledge lives in one place and the VO stays pure. The mechanism (plain guards, a schema library) is the project's choice; the VO never imports the library, the helper does.
 
 ```typescript
-class Currency {
-  constructor(
-    private readonly code: string,
-    private readonly name: string,
-    private readonly htmlCode: string,
-  ) {
-    if (!code || code.length !== 3) throw new Error('Invalid currency code');
+function ensureValidEmail(value: string): string {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    throw new DomainValidationError(`"${value}" is not a valid email`);
   }
+  return value;
+}
 
-  isEqual(other: Currency): boolean {
-    return this.code === other.code;
+class Email extends ValueObject<string> {
+  constructor(value: string) {
+    super(ensureValidEmail(value));
   }
 }
 
-class Money {
-  constructor(
-    private readonly amount: number,
-    private readonly currency: Currency,
-  ) {
-    if (amount < 0) throw new Error('Amount cannot be negative');
+// Schema variant: the helper owns the library
+function validateWithSchema<T>(name: string, schema: Schema<T>, value: unknown): T {
+  const result = schema.safeParse(value);
+  if (!result.success) throw new DomainValidationError(`${name}: ${result.error.message}`);
+  return result.data;
+}
+```
+
+## Composition: a VO containing another VO
+
+```typescript
+class Currency extends ValueObject<string> {
+  constructor(code: string) {
+    super(ensureIsoCurrencyCode(code)); // 3 letters, else DomainValidationError
+  }
+}
+
+class Money extends ValueObject<{ amount: number; currency: Currency }> {
+  constructor(amount: number, currency: Currency) {
+    super(ensureNonNegativeAmount({ amount, currency }));
   }
 
   add(other: Money): Money {
-    if (!this.currency.isEqual(other.currency)) throw new Error('Currency mismatch');
-    return new Money(this.amount + other.amount, this.currency);
+    this.assertSameCurrency(other);
+    return new Money(this.value.amount + other.value.amount, this.value.currency);
   }
 
   deduct(other: Money): Money {
-    if (!this.currency.isEqual(other.currency)) throw new Error('Currency mismatch');
-    if (other.amount > this.amount) throw new Error('Insufficient funds');
-    return new Money(this.amount - other.amount, this.currency);
+    this.assertSameCurrency(other);
+    if (other.value.amount > this.value.amount) {
+      throw new InsufficientFundsError(other.value.amount, this.value.amount);
+    }
+    return new Money(this.value.amount - other.value.amount, this.value.currency);
   }
 
-  isEqual(other: Money): boolean {
-    return this.amount === other.amount && this.currency.isEqual(other.currency);
+  private assertSameCurrency(other: Money): void {
+    if (!this.value.currency.isEqual(other.value.currency)) {
+      throw new DomainBusinessError('Currency mismatch');
+    }
   }
 }
 ```
 
-## VO carrying its own validation (Address example)
+`isEqual` is inherited from `ValueObject` and compares nested VOs by value; do not redeclare it per class.
+
+## Multi-field VO (Address)
 
 ```typescript
-class Address {
-  constructor(
-    private readonly street: string,
-    private readonly city: string,
-    private readonly postalCode: string,
-    private readonly country: string,
-  ) {
-    if (!street.trim()) throw new Error('Street is required');
-    if (!city.trim()) throw new Error('City is required');
-    if (!/^\d{5}$/.test(postalCode)) throw new Error('Invalid postal code');
-  }
+type AddressProps = { street: string; city: string; postalCode: string; country: string };
 
-  isEqual(other: Address): boolean {
-    return (
-      this.street === other.street &&
-      this.city === other.city &&
-      this.postalCode === other.postalCode &&
-      this.country === other.country
-    );
+function ensureValidAddress(props: AddressProps): AddressProps {
+  if (!props.street.trim()) throw new DomainValidationError('Street is required');
+  if (!props.city.trim()) throw new DomainValidationError('City is required');
+  if (!/^\d{5}$/.test(props.postalCode)) throw new DomainValidationError('Invalid postal code');
+  return props;
+}
+
+class Address extends ValueObject<AddressProps> {
+  constructor(props: AddressProps) {
+    super(ensureValidAddress(props));
   }
 }
 ```
 
-## When to use VO vs primitive
+## VO vs primitive
 
 Use a Value Object when:
-- Two or more primitives always travel together (amount + currency, lat + lon)
-- A primitive has its own validation rules (email format, postal code regex)
-- A primitive has domain-specific operations (Money.add, Percentage.of)
-- You find yourself duplicating validation logic for the same primitive type
+- two or more primitives always travel together (amount + currency, lat + lon)
+- a primitive has validation rules (email format, postal code regex)
+- a primitive has domain operations (`Money.add`, `Percentage.of`)
+- the same validation is being duplicated for one primitive type
 
----
+## ContextObject: a named cluster of VOs
 
-## ToPrimitives — serialization utility type
-
-Recursively unwraps `ValueObject<T>.value` to produce a plain-object type. Use for DTOs, event payloads, and persistence mappers:
+Use when several VOs only make sense together. It extends `ValueObject`, so equality and `value` work like any other VO.
 
 ```typescript
-type ToPrimitives<T> = T extends ValueObject<infer V>
-  ? ToPrimitives<V>
-  : T extends object
-  ? { [K in keyof T]: ToPrimitives<T[K]> }
-  : T;
-
-// Example
-type MoneyPrimitive = ToPrimitives<Money>;
-// → { amount: number; currency: { code: string; name: string; htmlCode: string } }
-
-// In DAO toDomain():
-class MoneyDAO {
-  amount: number;
-  currencyCode: string;
-
-  toDomain(): Money {
-    return new Money(this.amount, Currency.fromCode(this.currencyCode));
-  }
-}
-```
-
----
-
-## ContextObject — grouping related VOs into a named cluster
-
-Use when multiple Value Objects only make sense together as a named concept:
-
-```typescript
-// Signature of the generic base
-abstract class ContextObject<T extends Record<string, ValueObject<unknown>>> {
-  constructor(protected readonly values: T) {}
-
+abstract class ContextObject<T extends Record<string, ValueObject<unknown>>> extends ValueObject<T> {
   get<K extends keyof T>(key: K): T[K] {
-    return this.values[key];
+    return this.value[key];
   }
 }
 
-// Concrete usage — ProductIdentity requires all three
-class ProductIdentity extends ContextObject<{
-  sku: Sku;
-  ean: Ean;
-  storeCode: StoreCode;
-}> {
+class ProductIdentity extends ContextObject<{ sku: Sku; ean: Ean; storeCode: StoreCode }> {
   static of(sku: Sku, ean: Ean, storeCode: StoreCode): ProductIdentity {
     return new ProductIdentity({ sku, ean, storeCode });
   }
@@ -135,33 +115,29 @@ const identity = ProductIdentity.of(sku, ean, storeCode);
 identity.get('sku'); // typed as Sku
 ```
 
----
+## Composite identity
 
-## Validation helper pattern (generic)
-
-Centralize validation logic outside the VO constructor. The helper uses whatever validation mechanism fits your project — no library is prescribed:
+A VO that is an identity formed from several parts:
 
 ```typescript
-// Option A: pure TypeScript guards
-function validateEmail(value: string): string {
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
-    throw new DomainValidationError(`"${value}" is not a valid email`);
-  return value;
-}
-
-class Email extends ValueObject<string> {
-  constructor(value: string) {
-    super(validateEmail(value));
+class ProductId extends ValueObject<{ sku: string; ean: string; storeCode: string }> {
+  static of(sku: Sku, ean: Ean, storeCode: StoreCode): ProductId {
+    return new ProductId({ sku: sku.value, ean: ean.value, storeCode: storeCode.value });
   }
-}
-
-// Option B: schema validation (any library — Zod, Yup, Joi, etc.)
-// The VO doesn't import the library; the helper does
-function validateWithSchema<T>(name: string, schema: Schema<T>, value: unknown): T {
-  const result = schema.safeParse(value);
-  if (!result.success) throw new DomainValidationError(`${name}: ${result.error.message}`);
-  return result.data;
 }
 ```
 
-The key principle: **validation knowledge lives in one place**, not scattered across callers. The VO constructor delegates to the helper and stays clean.
+## Serialization
+
+Use `ToPrimitives<T>` (see `base-classes.md`) to unwrap VOs for DTOs, event payloads and persistence mappers.
+
+```typescript
+type MoneyPrimitive = ToPrimitives<Money>; // { amount: number; currency: string }
+
+// DAO mapper
+toDomain(): Money {
+  return new Money(this.amount, new Currency(this.currencyCode));
+}
+```
+
+Violations and severities: `anti-patterns.md` (AP-10, AP-11, AP-17, AP-30, AP-32, AP-46).

@@ -1,19 +1,26 @@
-# Module Structure Reference
+Load when: creating or reviewing a Module, its folder layout, DI wiring, layer dependencies or Module naming.
+
+# Module Structure
+
+Rules: `MOD-1` to `MOD-10` in `hard-rules.md`.
 
 ## Canonical folder layout (NestJS example)
 
 ```
 src/
+├── kernel/                                    ← shared kernel: base classes, Clock, DomainError (no business concepts)
+│   └── domain/
+│       ├── value-object.ts, entity.ts, aggregate-root.ts, domain-event.ts
+│       ├── clock.ts
+│       └── domain-error.ts                    ← DomainError + generic errors
 ├── customer/
 │   ├── infrastructure/
 │   │   ├── provider/
-│   │   │   └── customer.provider.ts       ← DI binding (DB vs Mock toggle)
+│   │   │   └── customer.provider.ts           ← DI binding: real adapter only
 │   │   └── adapter/
-│   │       ├── database/
-│   │       │   ├── customer.repository.ts ← implements ICustomerRepository
-│   │       │   └── customer.dao.ts        ← TypeORM @Entity()
-│   │       └── mock/
-│   │           └── customer.repository.ts ← in-memory fake for tests
+│   │       └── database/
+│   │           ├── customer.repository.ts     ← implements the port
+│   │           └── customer.dao.ts            ← TypeORM @Entity() lives here
 │   ├── presentation/
 │   │   └── controller/
 │   │       └── customer.controller.ts
@@ -21,34 +28,31 @@ src/
 │   │   ├── query/
 │   │   │   ├── customer.byId.handler.ts
 │   │   │   └── customer.byId.query.ts
-│   │   └── command/
-│   │       ├── customer.create.handler.ts
-│   │       └── customer.create.command.ts
+│   │   ├── command/
+│   │   │   ├── customer.create.handler.ts
+│   │   │   └── customer.create.command.ts
+│   │   └── testing/
+│   │       └── in-memory-customer.repository.ts   ← fake, extends the port
 │   ├── domain/
-│   │   ├── model/
-│   │   │   └── customer.entity.ts         ← DDD Entity (no @Entity from TypeORM)
-│   │   ├── port/
-│   │   │   └── customer.repository.ts     ← interface ICustomerRepository
-│   │   └── service/
-│   │       └── customer.factory.ts
+│   │   ├── model/customer.entity.ts           ← DDD Entity, no ORM decorators
+│   │   ├── port/customer.repository.ts        ← abstract class port
+│   │   ├── service/customer.factory.ts
+│   │   ├── events/customer-created.ts
+│   │   └── errors/customer.errors.ts          ← module errors
 │   └── customer.module.ts
 ```
 
-## Provider (DI wiring with environment toggle)
+Where things go: module errors in `domain/errors/`, module events in `domain/events/`, fakes in `application/testing/`, `DomainError` and generic errors in `kernel/domain/`.
+
+## Provider
+
+The provider binds the real adapter. Tests build their own testing module with the fake from `application/testing/`; there is no mock adapter and no `process.env` switch.
 
 ```typescript
 // infrastructure/provider/customer.provider.ts
-import { CustomerDBRepository } from '../adapter/database/customer.repository';
-import { CustomerMockRepository } from '../adapter/mock/customer.repository';
-
-export const CUSTOMER_REPOSITORY_TOKEN = 'customerRepository';
-
 export const customerProvider = {
-  provide: CUSTOMER_REPOSITORY_TOKEN,
-  useFactory: () => {
-    if (process.env.USE_MOCK === 'true') return new CustomerMockRepository();
-    return new CustomerDBRepository();
-  },
+  provide: CustomerRepositoryPort,           // abstract class used as the DI token
+  useClass: TypeORMCustomerRepository,
 };
 ```
 
@@ -56,12 +60,6 @@ export const customerProvider = {
 
 ```typescript
 // customer.module.ts
-import { Module } from '@nestjs/common';
-import { CqrsModule } from '@nestjs/cqrs';
-import { CustomerController } from './presentation/controller/customer.controller';
-import { customerProvider } from './infrastructure/provider/customer.provider';
-import { CustomerByIdHandler } from './application/query/customer.byId.handler';
-
 @Module({
   imports: [CqrsModule],
   controllers: [CustomerController],
@@ -73,63 +71,26 @@ export class CustomerModule {}
 ## Module dependency rules
 
 ```
-access ← customer ← shopping
-  ↑           ↑
-  └── (no cyclic deps allowed) ──┘
+access ← customer ← shopping       (arrows point to the dependency; no cycles)
 ```
 
-- `domain` layer: depends on NOTHING (no imports from other layers or modules)
+- `domain` layer: depends on NOTHING (no imports from other layers or Modules)
 - `application` layer: depends on `domain` only
 - `presentation` layer: depends on `application` and `domain`
-- `infrastructure` layer: depends on all layers — it wires them together
+- `infrastructure` layer: depends on all layers; it wires them together
 
-## Port pattern — abstract class vs interface
+## Ports
 
-```typescript
-// domain/port/customer.repository.ts
-// Use abstract class when DI injects by class reference (NestJS, Angular)
-abstract class CustomerRepositoryPort {
-  abstract findById(id: CustomerId): Promise<Customer>;
-  abstract save(customer: Customer): Promise<void>;
-}
-
-// infrastructure/adapter/database/customer.repository.ts
-class TypeORMCustomerRepository extends CustomerRepositoryPort {
-  async findById(id: CustomerId): Promise<Customer> {
-    const dao = await this.ormRepo.findOne({ where: { id: id.value } });
-    if (!dao) throw new CustomerNotFoundError(id.value);
-    return dao.toDomain();
-  }
-  async save(customer: Customer): Promise<void> { ... }
-}
-
-// application/testing/in-memory-customer.repository.ts — for tests
-class InMemoryCustomerRepository extends CustomerRepositoryPort {
-  private store = new Map<string, Customer>();
-
-  async findById(id: CustomerId): Promise<Customer> {
-    const c = this.store.get(id.value);
-    if (!c) throw new CustomerNotFoundError(id.value);
-    return c;
-  }
-
-  async save(customer: Customer): Promise<void> {
-    this.store.set(customer.id.value, customer);
-  }
-
-  all(): Customer[] { return [...this.store.values()]; } // test helper only
-}
-```
-
-Use `interface` instead of `abstract class` when you don't need class-reference injection. The contract and location rules stay the same.
+Port declaration style (abstract class by default, interface only when the codebase already uses them), the adapter example and InMemory fakes: `domain-service-and-testing.md`.
 
 ## Naming rules
 
-| Name | Status | Reason |
-|------|--------|--------|
-| `customer`, `shopping`, `access` | ✅ Good | Business vocabulary |
-| `utils` | ❌ Blocker | No semantic meaning |
-| `shared` | ❌ Blocker | Gravity well for everything that doesn't fit |
-| `events` | ❌ Blocker | Events belong inside their own Module |
-| `shoppingAndCustomer` | ❌ Warning | "and" = two responsibilities |
-| `strategy`, `factory` | ❌ Warning | Pattern name, not business name |
+| Name | Severity | Reason |
+|---|---|---|
+| `customer`, `shopping`, `access` | OK | Business vocabulary |
+| `utils`, `helpers`, `shared`, `common` | BLOCKER | No semantic meaning; gravity well for everything that does not fit |
+| `events` | BLOCKER | Events belong inside their own Module |
+| `shoppingAndCustomer` | WARNING | "and" means two responsibilities |
+| `strategy`, `factory` | WARNING | Pattern name, not a business name |
+
+The kernel folder is the only shared place, is not a Module, and holds only base classes (`MOD-10`).
