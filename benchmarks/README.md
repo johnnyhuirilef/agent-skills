@@ -64,6 +64,50 @@ Hard-tier scores of the suites behind the baseline below (`unit-test-declarative
 
 The hard tier removes the ceiling (60-68% instead of 97%), but the gap between versions is 3 to 5 mutants with 2 samples, so it does not yet show that one version is better. HA4, HA5, HB8, HB9, HT3, HT8 and HT10 survived in all 6 suites of their use case; 15 hard mutants were killed by all 18 suites and do not separate versions.
 
+### Stryker
+
+**Why.** The hand-written mutants above come from the same author as the use cases, so they can share the author's blind spots, and there are only 30 + 31 of them. [Stryker](https://stryker-mutator.io/) generates mutants mechanically from its standard mutators (about 44-63 per use case), so nobody chooses which bugs to plant. Use it as the primary score; keep the hand-written tiers for the specific semantics Stryker does not mutate (exact backoff values, call order, which error becomes the `cause`).
+
+**How to run.** `stryker.config.mjs` is shared. `stryker-run.sh` runs Stryker from inside one candidate project with the vitest runner, mutates only `src/<usecase>/**/*.ts` (minus the type-only `ports.ts` and entity interfaces), runs only that project's `tests/**/*.spec.ts`, disables incremental mode, and writes the JSON report to `results/stryker/<project>.json`. The clear-text score table goes to stdout.
+
+```bash
+cd benchmarks/unit-test-mutation
+(cd base && npm ci)                          # includes @stryker-mutator/core and vitest-runner
+./new-project.sh v4-auth-1                   # then generate the tests as above
+./stryker-run.sh projects/v4-auth-1 auth     # results/stryker/v4-auth-1.json
+python3 -I stryker-summary.py                # every report in results/stryker/
+```
+
+`stryker-summary.py` takes the version from the dash field before the use case (`stk-orig-auth-1` is version `orig`). Score = (killed + timeout) / (total - compile errors - ignored). Set `STRYKER_CONCURRENCY` to change the worker count (default 4). One run takes a few seconds.
+
+**Results.** The 18 suites behind the baseline (2 samples per use case, tests copied unchanged into fresh projects) and the hard-tier oracle as a reference:
+
+| Version | auth | billing | transfer | Total |
+|---|---|---|---|---|
+| Original | 84/88 | 83/88 | 117/126 | 282+2/302 = 94.0% |
+| PR #2 before cleanup | 88/88 | 85/88 | 117/126 | 288+2/302 = 96.0% |
+| PR #2 after cleanup | 84/88 | 84/88 | 116/126 | 282+2/302 = 94.0% |
+| Hard-tier oracle (1 suite each) | 29/44 | 32/44 | 46/63 | 107/151 = 70.9% |
+
+Cells are killed + timeout over mutants, summed over the 2 samples. Every billing suite has 1 timeout; nothing is a compile or runtime error. The oracle scores low because it only targets the hard tier; it is not a full suite.
+
+**Noise estimate** (`stryker-summary.py`, mutants paired by file, mutator, replacement and location within a use case):
+
+| A vs B | Killed only by an A suite | Killed only by a B suite | Mutants A>B / B>A | Sign test p | Bootstrap 95% CI of A-B |
+|---|---|---|---|---|---|
+| Original vs before cleanup | 3 | 15 | 0 / 4 | 0.125 | -4.0 to +0.0 pp |
+| Original vs after cleanup | 4 | 4 | 2 / 2 | 1.000 | -1.3 to +1.3 pp |
+| Before vs after cleanup | 14 | 2 | 5 / 1 | 0.219 | +0.7 to +3.3 pp |
+
+"Killed only by" sums over every cross-version suite pair (4 pairs per use case). Within a version, sample 1 and sample 2 disagree on 4 (original), 4 (before cleanup) and 0 (after cleanup) mutants. The sign test counts mutants whose detection rate differs between the two versions. The bootstrap resamples suites within each version and use case; with 2 suites per cell it has few distinct outcomes, so trust the sign test more. No version pair is significant: the 2-point lead of the version before cleanup comes from 4 to 6 mutants in `auth` and `billing`; `transfer` is level.
+
+**Limits.**
+
+- Equivalent mutants (a change that does not alter behaviour) survive for every suite, so they lower all versions by the same amount and do not bias a comparison, but they put a ceiling below 100%.
+- 45 of the 48 surviving or uncovered mutants over the 18 suites are `StringLiteral` mutants that empty an error message (`TransferFunds.ts`, `ChargeSubscription.ts`, `ResetPassword.ts`). A suite that asserts the error class and not the message lets them survive. Whether that matters is a style choice, so these mutants measure assertion strictness more than bug detection.
+- Stryker's standard mutators do not cover the hard-tier semantics (backoff values, call order, the `cause`), which is why the hard-tier oracle scores 71% here and the generated suites score 94-96% while missing hard mutants. Read both numbers.
+- Only `src/<usecase>/` is mutated; `src/shared/` (errors, clock) is not.
+
 ## ddd-skill
 
 **What it measures.** Fixed cases in `cases/<ID>/` (`prompt.txt` is the user request, `truth.json` is the answer key):
