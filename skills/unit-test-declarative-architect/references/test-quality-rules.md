@@ -11,7 +11,6 @@
 | TST-7 | MUST walk the edge-case checklist below and cover each applicable item or state why it is skipped. | Untested boundaries and failure paths |
 | TST-8 | MUST test one behavior per test; a test name with "and" signals a split. | Failures that do not point to a cause |
 | TST-9 | MUST use `toStrictEqual` for objects and arrays. MUST NOT use large snapshots. MUST NOT use `expect.anything()` for fields the test is about. | Extra or undefined fields passing silently |
-| TST-10 | MUST NOT over-specify mocks: stub only what the scenario needs. | Brittle arrange blocks |
 
 ## Edge-case checklist
 

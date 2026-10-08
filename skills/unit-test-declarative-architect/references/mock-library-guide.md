@@ -1,32 +1,30 @@
 # Mock Library Guide
 
-How to use `jest-mock-extended` (Jest) and `vitest-mock-extended` (Vitest) well. Rules for fakes, call order, and fresh `setup()` live in `TST-*` and `DET-*` (see `test-quality-rules.md` and `determinism-and-async.md`); this file only adds library usage.
+How to use `jest-mock-extended` (Jest) and `vitest-mock-extended` (Vitest) well. Rules for fakes, call order, a fresh `setup()`, and mock resets live in `TST-*` and `DET-*` (see `test-quality-rules.md` and `determinism-and-async.md`, DET-8); this file only adds library usage.
 
 ## Rules
 
 | ID | Rule | Failure it prevents |
 |---|---|---|
-| MOCK-1 | MUST import from the library that matches the runner: `vitest-mock-extended` in Vitest, `jest-mock-extended` in Jest. MUST NOT mix them, and MUST NOT use `jest.fn` or `vi.fn` to build port mocks. | Runtime errors or mocks bound to the wrong runner. |
-| MOCK-2 | MUST type mocks from the port interface: `mock<PaymentGateway>()`, or `MockProxy<PaymentGateway>` for a typed variable. MUST NOT mock concrete classes. | Stubs that compile against the wrong shape. |
-| MOCK-3 | MUST stub with `calledWith(...)` when the result depends on the arguments. MUST NOT use a blanket `mockResolvedValue` there. Use literals or matchers (`any()`, `anyString()`, `anyNumber()`, `isA(Class)`; collection matchers have different names per library, so check the library's exports before using one). | A test that passes for any argument, hiding wrong ids, amounts, or reasons. |
-| MOCK-4 | MUST stub async ports as `port.method.calledWith(...).mockResolvedValue(...)` or `.mockRejectedValue(...)`. When several entries match, the later registration wins, so register the general case first and the specific case after. | A specific stub silently shadowed by a general one. |
-| MOCK-5 | MUST make the mock strict when an unstubbed call returning `undefined` could hide a bug: pass `{ fallbackMockImplementation: () => { throw new Error('unexpected call') } }` as the second argument of `mock` (works with `mockDeep`). | An unexpected call to a port passing silently. |
+| MOCK-1 | MUST import from the library that matches the runner: `vitest-mock-extended` in Vitest, `jest-mock-extended` in Jest, never both. MUST type each mock from the port interface (`mock<PaymentGateway>()`), never from a concrete class, and MUST NOT build port mocks with `jest.fn` or `vi.fn`. | Runtime errors, mocks bound to the wrong runner, or stubs that compile against the wrong shape. |
+| MOCK-3 | MUST stub with `calledWith(...)` when the result depends on the arguments, and stub async ports with `.mockResolvedValue(...)` / `.mockRejectedValue(...)` on it. MUST NOT use a blanket `mockResolvedValue` there. Use literals or matchers (`any()`, `anyString()`, `anyNumber()`, `isA(Class)`; collection matchers have different names per library, so check the library's exports before using one). When several stubs match one call, the last registered wins: register the general case first and the specific case after. | A test that passes for any argument, hiding wrong ids, amounts, or reasons; a specific stub silently shadowed by a general one. |
+| MOCK-5 | MUST make the mock strict when an unstubbed call returning `undefined` could hide a bug: pass `{ fallbackMockImplementation: () => { throw new Error('unexpected call') } }` as the second argument of `mock` (`mockDeep` takes it as its first argument). | An unexpected call to a port passing silently. |
 | MOCK-6 | MUST use `captor<T>()` to assert the structure of an argument the SUT builds internally. Assert `captor.value` (last call) or `captor.values` (all calls) with `toStrictEqual`. | Tests that cannot see internally built objects and fall back to `expect.anything()` (TST-9). |
-| MOCK-7 | SHOULD use `mockDeep<T>()` only for genuinely nested SDK-style objects. Prefer a flat port. Pass `{ funcPropSupport: true }` only for function members that also carry properties. | Deep mocks coupling tests to a vendor object graph. |
-| MOCK-8 | MUST build mocks in a fresh `setup()` per test (DET-8). Use `mockReset(m)` only when a module-level mock is unavoidable. `mockClear(m)` clears call history only and keeps implementations. | Stubs and call history leaking between tests. |
-| MOCK-9 | MUST NOT mock a port member named `then`: the library ignores `then` by default so mocks are not treated as thenables. Only when a port truly has a `then` member, call `VitestMockExtended.configure({ ignoreProps: [] })` and `VitestMockExtended.resetConfig()` in `afterEach`. | A mock awaited as a promise that never settles, or a surprising `undefined` member. |
-| MOCK-10 | MUST check version compatibility before installing or upgrading: read the project's installed `vitest` or `jest`, and run `npm view vitest-mock-extended peerDependencies` (or `jest-mock-extended`). MUST NOT guess a mapping. Current `vitest-mock-extended` 5.x requires `vitest >= 4`. | Peer dependency errors or a mock library built for another runner major. |
+| MOCK-10 | MUST check version compatibility before installing or upgrading: read the project's installed `vitest` or `jest`, and run `npm view vitest-mock-extended peerDependencies` (or `jest-mock-extended`). MUST NOT guess a mapping. For example, `vitest-mock-extended` 5.1.1 declares `vitest >= 4.0.0`. | Peer dependency errors or a mock library built for another runner major. |
 
 Unstubbed calls return `undefined` by default, which is why MOCK-3 and MOCK-5 exist.
 
 ## Vitest
 
 ```typescript
-import { anyString, captor, mock, type MockProxy } from 'vitest-mock-extended';
+import { captor, mock } from 'vitest-mock-extended';
+import { type AuditLogger, type RefundEvent } from './audit-logger';
+import { type PaymentGateway } from './payment-gateway';
+import { RefundOrder } from './refund-order.use-case';
 
 const setup = () => {
   // MOCK-5: unexpected calls fail loudly
-  const gateway: MockProxy<PaymentGateway> = mock<PaymentGateway>(
+  const gateway = mock<PaymentGateway>(
     {},
     { fallbackMockImplementation: () => { throw new Error('unexpected call'); } },
   );
@@ -34,28 +32,39 @@ const setup = () => {
   return { gateway, audit, useCase: new RefundOrder(gateway, audit) };
 };
 
-// MOCK-3, MOCK-4: argument-specific async stub
-gateway.refund.calledWith(orderId, 5000, anyString()).mockResolvedValue({ status: 'REFUNDED' });
+it('should record the refund event when the gateway refunds the order', async () => {
+  // Arrange
+  const { gateway, audit, useCase } = setup();
+  // MOCK-3: argument-specific async stub
+  gateway.refund.calledWith('order-1', 5000, 'damaged').mockResolvedValue({ status: 'REFUNDED' });
+  // MOCK-6: capture an internally built argument
+  const eventCaptor = captor<RefundEvent>();
+  audit.record.calledWith(eventCaptor).mockResolvedValue(undefined);
 
-// MOCK-6: capture an internally built argument
-const eventCaptor = captor<AuditEvent>();
-audit.record.calledWith(eventCaptor).mockResolvedValue(undefined);
-// ...Act...
-expect(eventCaptor.value).toStrictEqual({ type: 'ARTICLE_PUBLISHED', articleId });
+  // Act
+  await useCase.run({ orderId: 'order-1', amount: 5000, reason: 'damaged' });
+
+  // Assert
+  expect(eventCaptor.value).toStrictEqual({ type: 'ORDER_REFUNDED', orderId: 'order-1', amount: 5000 });
+});
 ```
 
 ## Jest
 
-Same API; only the import source and the config object change.
+Same API; only the import source changes. Stubs, matchers, and `captor` work as in the Vitest example.
 
 ```typescript
-import { anyString, captor, mock, type MockProxy } from 'jest-mock-extended';
+import { mock } from 'jest-mock-extended';
+import { type AuditLogger } from './audit-logger';
+import { type PaymentGateway } from './payment-gateway';
+import { RefundOrder } from './refund-order.use-case';
 
-const gateway = mock<PaymentGateway>(
-  {},
-  { fallbackMockImplementation: () => { throw new Error('unexpected call'); } },
-);
-gateway.refund.calledWith(orderId, 5000, anyString()).mockResolvedValue({ status: 'REFUNDED' });
+const setup = () => {
+  const gateway = mock<PaymentGateway>(
+    {},
+    { fallbackMockImplementation: () => { throw new Error('unexpected call'); } },
+  );
+  const audit = mock<AuditLogger>();
+  return { gateway, audit, useCase: new RefundOrder(gateway, audit) };
+};
 ```
-
-For MOCK-9 in Jest, the equivalent is `JestMockExtended.configure({ ignoreProps: [] })` and `JestMockExtended.resetConfig()`.
