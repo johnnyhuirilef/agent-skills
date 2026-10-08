@@ -8,7 +8,7 @@ Rules: `MOD-1` to `MOD-10` in `hard-rules.md`.
 
 ```
 src/
-├── kernel/                                    ← shared kernel: base classes, Clock, DomainError (no business concepts)
+├── kernel/                                    ← technical kernel (building blocks): base classes, Clock, DomainError
 │   └── domain/
 │       ├── value-object.ts, entity.ts, aggregate-root.ts, domain-event.ts
 │       ├── clock.ts
@@ -42,11 +42,13 @@ src/
 │   └── customer.module.ts
 ```
 
-Where things go: module errors in `domain/errors/`, module events in `domain/events/`, fakes in `application/testing/`, `DomainError` and generic errors in `kernel/domain/`.
+Module errors: `domain/errors/`; events: `domain/events/`; fakes: `application/testing/`; `DomainError` and generic errors: `kernel/domain/`.
+
+Queries (read models) MAY read the database directly and skip domain/repository, but never mutate state.
 
 ## Provider
 
-The provider binds the real adapter. Tests build their own testing module with the fake from `application/testing/`; there is no mock adapter and no `process.env` switch.
+The provider binds the real adapter. Tests build their own testing module with the fake from `application/testing/`; no mock adapter, no `process.env` switch.
 
 ```typescript
 // infrastructure/provider/customer.provider.ts
@@ -74,23 +76,24 @@ export class CustomerModule {}
 access ← customer ← shopping       (arrows point to the dependency; no cycles)
 ```
 
-- `domain` layer: depends on NOTHING (no imports from other layers or Modules)
-- `application` layer: depends on `domain` only
-- `presentation` layer: depends on `application` and `domain`
-- `infrastructure` layer: depends on all layers; it wires them together
+Layer imports follow `MOD-5`: `domain` imports nothing; `infrastructure` wires all layers.
 
 ## Ports
 
-Port declaration style (abstract class by default, interface only when the codebase already uses them), the adapter example and InMemory fakes: `domain-service-and-testing.md`.
+Port style, adapter example and InMemory fakes: `domain-service-and-testing.md`.
 
 ## Naming rules
 
 | Name | Severity | Reason |
 |---|---|---|
 | `customer`, `shopping`, `access` | OK | Business vocabulary |
-| `utils`, `helpers`, `shared`, `common` | BLOCKER | No semantic meaning; gravity well for everything that does not fit |
-| `events` | BLOCKER | Events belong inside their own Module |
+| `utils`, `helpers`, `shared`, `common` | CRITICAL | No semantic meaning; gravity well for everything that does not fit |
+| `events` | CRITICAL | Events belong inside their own Module |
 | `shoppingAndCustomer` | WARNING | "and" means two responsibilities |
 | `strategy`, `factory` | WARNING | Pattern name, not a business name |
 
-The kernel folder is the only shared place, is not a Module, and holds only base classes (`MOD-10`).
+The kernel folder is the only shared place, is not a Module, and holds only technical building blocks (`MOD-10`).
+
+## Strategic scope
+
+A Module groups cohesive concepts under a Ubiquitous Language name. A top-level module folder is a pragmatic stand-in for a Bounded Context in a modular monolith, but a Bounded Context is a language/model boundary. Create a new one when the same term means different things (Order in Shipping vs Billing), another team or model owns it, or two parts need different models of one entity. Between contexts choose an explicit relationship (Customer/Supplier, Conformist, Anti-Corruption Layer, Open Host Service + Published Language, Shared Kernel, Separate Ways). Cross-context calls go through a port, never the other context's domain classes.

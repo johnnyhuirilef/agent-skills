@@ -2,11 +2,11 @@ Load when: writing or reviewing an Aggregate Root with internal entities, create
 
 # Aggregate Patterns
 
-Rules: `AGG-1` to `AGG-10` in `hard-rules.md`. Kernel types (`AggregateRoot`, `DomainDeps`, `systemDeps`, `Clock`) are in `base-classes.md`.
+Rules: `AGG-1` to `AGG-11` in `hard-rules.md`. Technical kernel types (`AggregateRoot`, `DomainDeps`, `systemDeps`, `Clock`) are in `base-classes.md`.
 
 ## Multi-entity example: CustomerAccount
 
-The root has a global identity VO and a private constructor. `create` validates and emits events; `restore` rebuilds from persisted state and emits nothing.
+The root has a global identity VO and a private constructor. `create` emits events; `restore` emits none.
 
 ```typescript
 type CustomerAccountEvent = CustomerAccountCreated | BankAccountOpened;
@@ -79,7 +79,7 @@ class CustomerAccount extends AggregateRoot<CustomerAccountId, CustomerAccountEv
   }
 }
 
-// Internal Entity: local identity VO, never referenced outside CustomerAccount, not exported from the Module
+// Internal Entity: local identity VO, not referenced or exported outside CustomerAccount
 class BankAccount extends Entity<BankAccountId> {
   private constructor(
     id: BankAccountId,
@@ -134,7 +134,7 @@ const customerId: string = customerAccount.id.value; // OK
 
 ## Repository contract
 
-The aggregate is persisted and deleted as a unit. The port throws a typed error when the aggregate is missing; the adapter loads with `restore`, never `create`.
+Persisted and deleted as a unit; the port throws a typed error when missing; the adapter loads with `restore`.
 
 ```typescript
 // domain/port/customer-account.repository.ts
@@ -150,7 +150,7 @@ Port style rationale and fakes: `domain-service-and-testing.md`.
 
 ## DomainDeps in a factory
 
-The `DomainDeps` definition and the default `systemDeps` are in `base-classes.md`. Tests inject fakes, no DI container needed:
+`DomainDeps` and `systemDeps` are in `base-classes.md`. Tests inject fakes:
 
 ```typescript
 const agreement = Agreement.create(id, {
@@ -161,11 +161,11 @@ const agreement = Agreement.create(id, {
 
 ## pullDomainEvents
 
-One call, after `save`, then publish. The canonical Application Service flow, the outbox caveat and versioning are in `domain-event-patterns.md`.
+One call, after `save`, then publish; flow and outbox: `domain-event-patterns.md`.
 
 ## Inter-aggregate coordination via snapshot
 
-Never pass an Aggregate Root into another. Expose a minimum read-only snapshot and reference the other aggregate by its id VO.
+Do not pass an Aggregate Root into another. Expose a minimal read-only snapshot and reference the other aggregate by its id VO. Effects on a second aggregate go through domain events (`AGG-11`).
 
 ```typescript
 // Agreement exposes only what the consumer needs
@@ -191,4 +191,6 @@ const consent = UserConsent.recordFor(agreement.toConsentableSnapshot(), userId)
 
 ## Size check
 
-An aggregate with 10+ methods or 5+ internal Entities probably has a boundary that is too large. If two internal Entities do not need to change together in the same transaction, they belong in separate Aggregates. Two Entities that are always loaded but rarely modified together are a second signal. Both are WARNINGs (`AP-23`, `AP-24`).
+Include only data that must be consistent in one transaction. Split when parts need not change atomically or concurrent edits conflict; method or entity counts alone are not a signal. Both are heuristic WARNINGs (`AP-23`, `AP-24`).
+
+Optimistic concurrency: the snapshot `version` is checked by the repository on save; a mismatch throws a `concurrency.optimistic-lock` error.

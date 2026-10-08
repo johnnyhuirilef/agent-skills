@@ -32,7 +32,7 @@ Not stateless (each is a BLOCKER, see `anti-patterns.md`): a `private lastRate: 
 
 ## Port style: abstract class vs interface
 
-Default is `abstract class`: it is a runtime value, so DI frameworks (NestJS, Angular) inject it by class reference without a string token. Use `interface` only when the user's code already declares ports as interfaces (then keep that style everywhere in the codebase). The domain declares the contract; infrastructure implements it.
+In NestJS/DI-container projects use `abstract class`: it is a runtime value and doubles as the injection token. Otherwise `interface` plus a Symbol token is equally valid. Follow the project's existing style everywhere. The domain declares the contract; infrastructure implements it.
 
 ```typescript
 // infrastructure/adapter/open-exchange-rates.adapter.ts
@@ -47,7 +47,7 @@ With an `interface` port the adapter uses `implements` and the DI binding needs 
 
 ## InMemory fakes
 
-Fast, deterministic fakes of repository ports. They live in `application/testing/`, not in infrastructure, and are wired explicitly by tests. A provider never switches to a fake through an environment variable.
+Fast, deterministic fakes of repository ports. They live in `application/testing/`, are wired explicitly by tests, and no provider switches to them via an environment variable.
 
 ```typescript
 // application/testing/in-memory-agreement.repository.ts

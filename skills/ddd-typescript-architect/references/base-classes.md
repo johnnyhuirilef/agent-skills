@@ -1,14 +1,14 @@
 Load when: writing or reviewing code that extends ValueObject, Entity, AggregateRoot or DomainEvent, or that needs Clock, IdGenerator, DomainDeps or ToPrimitives.
 
-# Shared Domain Kernel
+# Technical Kernel
 
-**If the user's project already has its own kernel** (their `ValueObject`, `Entity`, `Clock`, `DomainDeps`), follow it and do not redefine it. Where it differs from this file (for example `value` is `protected`), read through the accessors it offers (getters, `toPrimitives()`) and list each difference under Assumptions. The definitions below are the default when no kernel exists.
+**If the project already has its own kernel** (`ValueObject`, `Entity`, `Clock`, `DomainDeps`), follow it and do not redefine it. Where it differs (for example `value` is `protected`), read through its accessors and list each difference under Assumptions. The definitions below are the default.
 
-The kernel is the one place these base types are defined. It lives in `src/kernel/domain/` (not a business Module: no layers, no business concepts, only the types below plus `DomainError`, see `domain-errors.md`). Never name it `shared` or `common`.
+The kernel is the one place these base types are defined. It lives in `src/kernel/domain/` (not a Module: no layers, only the types below plus `DomainError`, see `domain-errors.md`). Never name it `shared` or `common`. `src/kernel/` holds technical building blocks (Entity, ValueObject, Clock, DomainError). It is not a DDD Shared Kernel, which is a small piece of domain model co-owned by two contexts. Never put business concepts here (MOD-10).
 
 ## Time and ids
 
-Domain code never reads the system clock or generates ids directly. It receives them through `DomainDeps`.
+Domain code receives time and ids through `DomainDeps`, never from the system.
 
 ```typescript
 // kernel/domain/clock.ts

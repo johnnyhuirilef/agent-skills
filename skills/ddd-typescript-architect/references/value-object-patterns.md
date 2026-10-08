@@ -6,7 +6,7 @@ Rules: `VO-1` to `VO-9` in `hard-rules.md`. `ValueObject<T>` and `ToPrimitives<T
 
 ## Validation helper
 
-The constructor calls a helper and passes the result to `super`. Validation knowledge lives in one place and the VO stays pure. The mechanism (plain guards, a schema library) is the project's choice; the VO never imports the library, the helper does.
+The constructor passes a helper's result to `super`, keeping validation in one place. The mechanism (plain guards, a schema library) is the project's choice; the VO never imports the library, the helper does.
 
 ```typescript
 function ensureValidEmail(value: string): string {

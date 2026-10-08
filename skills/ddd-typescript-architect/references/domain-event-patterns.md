@@ -15,11 +15,10 @@ product.product-published.v1
 payment.payment-failed.v1
 ```
 
-- Context is the Module name: singular, lowercase
-- Event name is past tense, kebab-case
-- Class name is the same name in PascalCase with no `Event` suffix: `AgreementActivated`, `ClientAppSecretRotated`
-- Adding an optional field is non-breaking (same version)
-- Any other payload change (remove, rename, retype, new required field) bumps `vN`
+- Context is the Module name (singular, lowercase); event name is past tense, kebab-case
+- Class name is PascalCase without `Event` suffix: `AgreementActivated`
+- Adding an optional field is non-breaking only for tolerant readers
+- Never rename a field or change its meaning; any other change bumps `vN`
 
 ## Concrete event
 
@@ -41,7 +40,7 @@ class AgreementActivated extends DomainEvent<AgreementActivatedPayload> {
 }
 ```
 
-`occurredAt` is passed by the aggregate from its clock; the event never creates it.
+The aggregate passes `occurredAt` from its clock.
 
 ## Emitting from the aggregate
 
@@ -72,7 +71,7 @@ abstract class EventBusPort<Event extends DomainEvent = DomainEvent> {
 }
 ```
 
-Inject `EventBusPort` in the Application layer only, never in the domain.
+Inject `EventBusPort` in the Application layer only.
 
 ## Application Service: load, act, persist, drain, publish
 
@@ -97,9 +96,9 @@ class ActivateAgreementHandler {
 }
 ```
 
-Persist THEN publish: publishing first and failing to save emits an event for state that does not exist. `pullDomainEvents()` is destructive; calling it again returns `[]`.
+Persist THEN publish integration events: publishing first and failing to save emits an event for state that does not exist. In-process domain-event handlers MAY run before commit when their side effects must share the transaction; record that choice in the Decision Log. `pullDomainEvents()` is destructive; a second call returns `[]`.
 
-**Delivery guarantee.** If the process crashes between `save` and `publish`, the drained events are lost. To prevent that, write the events to an outbox table in the same transaction as the aggregate and relay them from there. Without an outbox, delivery is at-most-once.
+**Delivery guarantee.** A crash between `save` and `publish` loses the drained events. Outbox: write the event to an outbox table in the SAME transaction as the aggregate save and relay it from there. Delivery is then at-least-once, so consumers must be idempotent. Without an outbox, delivery is at-most-once.
 
 ## Typed event registry
 
@@ -108,13 +107,18 @@ Persist THEN publish: publishing first and failing to save emits an event for st
 type AgreementEvent = AgreementCreated | AgreementActivated | AgreementArchived;
 ```
 
-Use the union as the aggregate's event generic and as the `EventBusPort` parameter; it narrows what this context can publish.
+Use the union as the aggregate's event generic and the `EventBusPort` parameter.
+
+## Domain vs integration events
+
+Same semantics, different implementation. Domain events are in-process, raised by the aggregate, handled in the application layer, sync or async. Integration events cross context or service boundaries, are always async, are published only after commit, and are built by an application handler from a domain event.
 
 ## Versioning a breaking change
 
-1. Create a new class, for example `AgreementActivatedV2`, with `EVENT_NAME = 'agreement.agreement-activated.v2'`
-2. Keep the old handler alive until every consumer has migrated
+1. New class, for example `AgreementActivatedV2`, with `EVENT_NAME = 'agreement.agreement-activated.v2'`
+2. Keep the old handler until every consumer has migrated
 3. The aggregate emits v2 from now on
-4. Never mutate a published versioned class
+
+Upcasting old events on read is an alternative to bumping `vN`.
 
 Violations and severities: `anti-patterns.md` (AP-12, AP-15, AP-16, AP-21, AP-26, AP-27, AP-29, AP-41).

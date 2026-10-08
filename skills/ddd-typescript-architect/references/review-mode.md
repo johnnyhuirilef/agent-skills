@@ -2,27 +2,22 @@ Load when: the user pastes code or asks for a review, or a "refactor" request ne
 
 # Review Mode
 
-The mode gate itself is in `SKILL.md`. This file holds the review procedure, report template, finding fields, verdict rule and Grilling Loop.
+The mode gate is in `SKILL.md`. This file holds the procedure, report template, finding fields, verdict rule and Grilling Loop.
 
-## Severity scale
+## Severity
 
-- **BLOCKER**: breaks a layering, identity, encapsulation or aggregate invariant. Must be fixed before merge.
-- **CRITICAL**: serious but contained.
-- **WARNING**: smell or risk.
-- **SUGGESTION**: optional improvement.
-
-Report each defect at its own table severity (`anti-patterns.md`). Never escalate a finding because other findings exist. Report only violations of a rule or a table row; anything else goes under at most 3 SUGGESTIONs.
+Use the scale and table severities in `anti-patterns.md`, including its `[convention]` cap. Report only violations of a rule or a table row; anything else goes under at most 3 SUGGESTIONs.
 
 ## Procedure
 
-1. Read the code. Identify every pattern and layer involved. Do not write fixes yet.
+1. Read the code; identify every pattern and layer. No fixes yet.
 2. Check it against `anti-patterns.md`. Cite the rule ID from `hard-rules.md` for each finding (the `Rule` column of the row gives it).
 3. Present the report.
 4. Ask the Grilling Loop question (unless the verdict is APPROVE or the run is non-interactive).
 
 For a "refactor" request: review the existing code briefly (findings only, no grilling question), then switch to Implementation mode (`implementation-mode.md`).
 
-Non-interactive fallback (evaluation, CI, subagent, or the prompt says no user can answer): state assumptions in one short list, deliver the full report, and omit the Grilling Loop question. Never stop to wait. If the user's message explicitly asks for the confirmation question, include it.
+Non-interactive fallback (evaluation, CI, subagent, or the prompt says no user can answer): state assumptions in a short list, deliver the full report, omit the Grilling Loop question, never wait. If the user explicitly asks for the confirmation question, include it.
 
 ## Report template
 
@@ -44,7 +39,7 @@ APPROVE | REFACTOR | REDESIGN: <one sentence reason>
 
 Every finding MUST have all of these fields. None is optional:
 
-- **Severity** and rule ID (for example `BLOCKER, ENT-1`)
+- **Severity** and rule ID (for example `BLOCKER, ENT-10`)
 - **File / class / line**
 - **Evidence**: the exact code
 - **Why**: the concrete DDD consequence, not a generic statement

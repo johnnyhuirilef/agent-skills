@@ -2,7 +2,7 @@ Load when: writing or reviewing an Entity, an internal aggregate entity, entity 
 
 # Entity Patterns
 
-Rules: `ENT-1` to `ENT-11` in `hard-rules.md`. Kernel `Entity` is in `base-classes.md`.
+Rules: `ENT-1` to `ENT-11` in `hard-rules.md`. Technical kernel `Entity` is in `base-classes.md`.
 
 ## Identity types
 
@@ -14,7 +14,7 @@ All identities are Value Objects, including local ids of internal entities. Choo
 | Natural | The real world guarantees uniqueness | `Iban`, social security number |
 | Composite | Several values form one identity | `ProductId.of(sku, ean, storeCode)` (see `value-object-patterns.md`) |
 
-A database-assigned id (auto-increment, `@PrimaryGeneratedColumn`) never enters the domain. The DAO may keep a surrogate column, but the domain id is supplied by the application.
+Prefer application-generated ids (`ENT-7`). A database-assigned id is a trade-off: no id at creation, events and commands cannot reference it, retries cannot be deduplicated. Accept it only if the id is not needed to construct the aggregate. The DAO may keep a surrogate column.
 
 ```typescript
 class BankAccountId extends ValueObject<string> {
@@ -56,11 +56,11 @@ withRotatedSecret(newSecret: ClientSecret): ClientApp {
 }
 ```
 
-Use this style for small entities. For entities inside an Aggregate, mutating private fields through validated methods is equally valid (`ENT-5`).
+Use this for small entities. Inside an Aggregate, mutating private fields through validated methods is equally valid (`ENT-5`).
 
 ## Domain / infrastructure split
 
-The domain class and the persistence mapper are different classes in different layers.
+Domain class and persistence mapper are different classes in different layers.
 
 ```typescript
 // domain/model/bank-account.entity.ts
@@ -95,8 +95,6 @@ class BankAccountDAO {
   }
 }
 ```
-
-When flagging a TypeORM `@Entity()` on a domain class, cite this quote: *"In TypeORM, the Entity is used as a mapper to a table in the database, but that is not the case with the Entity from DDD. If you use DDD Entity to map it to the database, that is a cardinal error."*
 
 ## Pushing logic out of the Entity
 

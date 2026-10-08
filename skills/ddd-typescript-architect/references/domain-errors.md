@@ -2,9 +2,9 @@ Load when: defining or reviewing domain errors, error codes, error mapping, or w
 
 # Domain Error Patterns
 
-Rules: `ERR-1` to `ERR-7` and `REP-2` in `hard-rules.md`.
+Rules: `ERR-1` to `ERR-8` and `REP-2` in `hard-rules.md`.
 
-## Base hierarchy (shared kernel)
+## Base hierarchy (technical kernel)
 
 `DomainError` and the generic errors live in `kernel/domain/domain-error.ts`. Module-specific errors live in `<module>/domain/errors/`.
 
@@ -58,11 +58,11 @@ class SystemError extends DomainError {
 }
 ```
 
-Use `DomainValidationError` and `DomainBusinessError` directly for one-off rules. Subclass them when callers must tell cases apart.
+Use `DomainValidationError` and `DomainBusinessError` directly for one-off rules; subclass when callers must tell cases apart.
 
 ## Taxonomy
 
-Each code is `<category>.<specific-name>`. Group module errors next to their models, not in a shared `errors/` module.
+Each code is `<category>.<specific-name>`. Keep module errors next to their models.
 
 | Category | Prefix | When to use |
 |----------|--------|-------------|
@@ -121,7 +121,7 @@ Application Layer   → lets DomainError propagate or maps it; never swallows it
 Presentation Layer  → receives the mapped error, never catches domain errors directly
 ```
 
-The domain never catches its own errors. It throws; callers handle.
+The domain never swallows its own errors. It throws; callers handle. Input shape validation (zod, class-validator) stays at the presentation/application edge, never on domain classes (`ERR-8`).
 
 ## Mapping to a response (presentation)
 

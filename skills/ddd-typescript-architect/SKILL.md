@@ -48,15 +48,15 @@ Then identify the pattern and layer of every artifact.
 
 ## Hard Rules
 
-Rules live in `references/hard-rules.md`; cite them by ID.
+Rules live in `references/hard-rules.md`; cite them by ID. Each is tagged `[canon]`, `[practice]` or `[convention]`; in a review, a `[convention]` violation is at most a WARNING unless the project defines otherwise or the AP row fixes a higher severity.
 
 - Value Objects: immutable, extend `ValueObject`, validate in the constructor (VO-1, VO-2, VO-3).
-- Entity ids are Value Objects, application-generated, never bare primitives or DB-assigned (ENT-1, ENT-7). No ORM decorator on a domain class (ENT-2).
+- Entity ids SHOULD be Value Objects, application-generated (ENT-1, ENT-7). No ORM decorator on a domain class (ENT-2).
 - Domain Services hold no mutable state (DS-1, DS-4).
-- Aggregate roots: private constructor, `create` emits events, `restore` emits none (AGG-5). Other roots by id only (AGG-7).
+- Aggregate roots: private constructor, `create` emits events, `restore` emits none (AGG-5). Other roots by id (AGG-7); one aggregate per transaction (AGG-11).
 - Time and ids come from `DomainDeps`, never the system (AGG-6, DS-8).
-- Events: past tense, `<context>.<event-name>.v<N>`, static `fromPrimitives`, published only by the Application layer after `save` (EV-2, EV-3, EV-5, EV-8, EV-9).
-- The domain throws `DomainError` subclasses, never `Error`, and never catches them (ERR-1, ERR-4).
+- Events: past tense, `<context>.<event-name>.v<N>`, static `fromPrimitives`, integration events published only by the Application layer after `save` (EV-2, EV-3, EV-5, EV-8, EV-9).
+- The domain throws `DomainError` subclasses, never `Error`, and never swallows them (ERR-1, ERR-4).
 - Ports are abstract classes and throw typed not-found errors; repositories rebuild with `restore` (REP-1, REP-2, REP-4).
 - Module names are business words; layers per MOD-1, MOD-2, MOD-5.
 
@@ -93,8 +93,8 @@ BLOCKER and CRITICAL index (full table in `anti-patterns.md`):
 
 | Sev | Defect (AP id) |
 |---|---|
-| BLOCKER | ORM `@Entity()` on domain class (AP-1); Domain Service state, direct, indirect or accumulated (AP-2, AP-3, AP-4); anemic Entity (AP-5); outside access to aggregate internals (AP-6); partial aggregate persistence (AP-7); Entity calling Repository/DB (AP-8); domain swallows exceptions (AP-9); mutable VO field or `===` on VOs (AP-10, AP-11); mutable event payload (AP-12); module named `utils`, `helpers`, `shared`, `events` or `common` (AP-13); domain imports outward (AP-14) |
-| CRITICAL | Aggregate publishes events or holds an EventBus (AP-15, AP-16); VO setter (AP-17); DB-assigned id in domain (AP-18); bare primitive entity id (AP-19); repository rebuilds with `create` (AP-20); publish before persist (AP-21) |
+| BLOCKER | ORM decorator on domain class (AP-1); Domain Service state, direct, indirect or accumulated (AP-2, AP-3, AP-4); outside access to aggregate internals (AP-6); partial aggregate persistence (AP-7); Entity calling Repository/DB (AP-8); mutable VO field or `===` on VOs (AP-10, AP-11); mutable event payload (AP-12); domain imports outward (AP-14) |
+| CRITICAL | Anemic Entity in a context with business rules (AP-5); catch that swallows a domain error (AP-9); module named `utils`, `helpers`, `shared`, `events` or `common` (AP-13); EventBus in an aggregate (AP-16); VO setter (AP-17); repository rebuilds with `create` (AP-20); integration event published before persist (AP-21) |
 
 Verdict: any BLOCKER = REDESIGN. Any CRITICAL or more than 2 WARNING = REFACTOR. Otherwise APPROVE; clean code gets APPROVE.
 
