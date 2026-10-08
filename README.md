@@ -42,9 +42,9 @@ Generate and critique Domain-Driven Design canvases — Bounded Context Canvas v
 ---
 
 ### [unit-test-declarative-architect](skills/unit-test-declarative-architect/)
-Generate high-quality declarative unit tests with AAA structure, FIRST/DAMP principles, Fishery factories, and In-Memory Fakes. Auto-detects Jest or Vitest.
+Generate high-quality declarative unit tests with AAA structure, Fishery factories, and In-Memory Fakes. Auto-detects Jest or Vitest. Rules cover deterministic time and randomness, async, parameterized cases, edge cases, and proving each test can fail.
 
-**Triggers:** unit tests, test suite, Fishery factory, In-Memory repository, mock service
+**Triggers:** unit tests, test suite, Fishery factory, In-Memory repository, mock service, fake timers, it.each
 
 ---
 
@@ -73,7 +73,8 @@ skills/
 │   └── references/
 ├── unit-test-declarative-architect/
 │   ├── SKILL.md
-│   └── references/
+│   ├── references/
+│   └── evals/
 ├── secure-coding-architect/
 │   ├── SKILL.md
 │   ├── references/

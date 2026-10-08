@@ -6,74 +6,308 @@
       "prompt": "Generame el test unitario para un Use Case 'ProcessOrder' que depende de un 'OrderRepository' y un 'PaymentService'. El PaymentService devuelve un Result (neverthrow).",
       "expected_output": "The skill MUST generate a Fishery Factory for Order, an InMemoryOrderRepository, and a test suite with a setup() function. The naming MUST use natural language ('should X when Y'). It MUST include AAA comments and use Result type assertions (isOk, isErr, _unsafeUnwrap).",
       "assertions": [
-        { "type": "contains", "value": "setup" },
-        { "type": "contains", "value": "Factory.define" },
-        { "type": "contains", "value": "InMemory" },
-        { "type": "contains", "value": "// Arrange" },
-        { "type": "contains", "value": "// Act" },
-        { "type": "contains", "value": "// Assert" },
-        { "type": "contains", "value": "isOk()" },
-        { "type": "contains", "value": "isErr()" },
-        { "type": "not_contains", "value": "should_" },
-        { "type": "custom", "description": "Must include at least 3 test cases: happy path, entity not found, and business logic error" }
+        {
+          "type": "contains",
+          "value": "setup"
+        },
+        {
+          "type": "contains",
+          "value": "Factory.define"
+        },
+        {
+          "type": "contains",
+          "value": "InMemory"
+        },
+        {
+          "type": "contains",
+          "value": "// Arrange"
+        },
+        {
+          "type": "contains",
+          "value": "// Act"
+        },
+        {
+          "type": "contains",
+          "value": "// Assert"
+        },
+        {
+          "type": "contains",
+          "value": "isOk()"
+        },
+        {
+          "type": "contains",
+          "value": "isErr()"
+        },
+        {
+          "type": "not_contains",
+          "value": "should_"
+        },
+        {
+          "type": "custom",
+          "description": "Must include at least 3 test cases: happy path, entity not found, and business logic error"
+        }
       ],
-      "files": []
+      "files": [],
+      "expectations": [
+        "Defines setup() returning the fake, the mock, and the use case",
+        "Uses an InMemoryOrderRepository instead of mocking OrderRepository",
+        "Every test has // Arrange, // Act, // Assert comments",
+        "Asserts Result outcomes with isOk()/isErr()",
+        "Covers happy path, order not found, and payment failure"
+      ]
     },
     {
       "id": 2,
       "prompt": "Create unit tests for 'UserRegistration' use case. It depends on 'UserRepository' and 'EmailService'. Use exceptions for error handling.",
       "expected_output": "The skill MUST generate the Factory, the InMemoryUserRepository, and tests that use rejects.toThrow for error cases. The setup() function must return Fakes and mocks. Assertions should verify repository state when applicable.",
       "assertions": [
-        { "type": "contains", "value": "setup" },
-        { "type": "contains", "value": "InMemory" },
-        { "type": "contains", "value": "rejects.toThrow" },
-        { "type": "contains", "value": "// Arrange" },
-        { "type": "contains", "value": "findById" },
-        { "type": "not_contains", "value": "should_" },
-        { "type": "custom", "description": "Must verify persisted state in the InMemory repository, not just mock call verification" }
+        {
+          "type": "contains",
+          "value": "setup"
+        },
+        {
+          "type": "contains",
+          "value": "InMemory"
+        },
+        {
+          "type": "contains",
+          "value": "rejects.toThrow"
+        },
+        {
+          "type": "contains",
+          "value": "// Arrange"
+        },
+        {
+          "type": "contains",
+          "value": "findById"
+        },
+        {
+          "type": "not_contains",
+          "value": "should_"
+        },
+        {
+          "type": "custom",
+          "description": "Must verify persisted state in the InMemory repository, not just mock call verification"
+        }
       ],
-      "files": []
+      "files": [],
+      "expectations": [
+        "Defines setup() and an InMemoryUserRepository fake",
+        "Uses rejects.toThrow for error cases",
+        "Verifies persisted user via repository.findById",
+        "Mocks EmailService rather than faking it",
+        "Test names follow 'should ... when ...'"
+      ]
     },
     {
       "id": 3,
       "prompt": "Generate tests for 'TransferFunds' use case. It depends on 'AccountRepository', 'TransactionLogger', and 'FraudDetectionService'. TransactionLogger should be mocked, AccountRepository should be a Fake. FraudDetectionService returns Result.",
       "expected_output": "The skill must handle 3+ dependencies correctly: Fake for AccountRepository, mock for TransactionLogger and FraudDetectionService. Must generate setup() returning all three plus the SUT. Tests must cover: successful transfer, insufficient funds, fraud detected.",
       "assertions": [
-        { "type": "contains", "value": "InMemoryAccountRepository" },
-        { "type": "contains", "value": "mock<TransactionLogger>" },
-        { "type": "contains", "value": "mock<FraudDetectionService>" },
-        { "type": "contains", "value": "setup" },
-        { "type": "custom", "description": "setup() must return at least 4 items: repository, transactionLogger, fraudDetectionService, useCase" },
-        { "type": "custom", "description": "Must include test for fraud detection failure path using Result type assertions" }
+        {
+          "type": "contains",
+          "value": "InMemoryAccountRepository"
+        },
+        {
+          "type": "contains",
+          "value": "mock<TransactionLogger>"
+        },
+        {
+          "type": "contains",
+          "value": "mock<FraudDetectionService>"
+        },
+        {
+          "type": "contains",
+          "value": "setup"
+        },
+        {
+          "type": "custom",
+          "description": "setup() must return at least 4 items: repository, transactionLogger, fraudDetectionService, useCase"
+        },
+        {
+          "type": "custom",
+          "description": "Must include test for fraud detection failure path using Result type assertions"
+        }
       ],
-      "files": []
+      "files": [],
+      "expectations": [
+        "Uses InMemoryAccountRepository, not a mock, for AccountRepository",
+        "Uses mock<TransactionLogger>() and mock<FraudDetectionService>()",
+        "setup() returns repository, logger, fraud service, and use case",
+        "Covers success, insufficient funds, and fraud detected",
+        "Asserts balances through the fake repository"
+      ]
     },
     {
       "id": 4,
       "prompt": "Write tests for 'CreateInvoice' use case. The Invoice entity has nested LineItems (each with Product reference and quantity). Invoice depends on 'InvoiceRepository' and 'TaxCalculator'.",
       "expected_output": "The skill must generate a Factory that handles nested structures (Invoice with LineItems containing Product references). Must show .build() with nested overrides. InMemory repo must support the full Invoice entity.",
       "assertions": [
-        { "type": "contains", "value": "Factory.define" },
-        { "type": "contains", "value": "items" },
-        { "type": "contains", "value": ".build(" },
-        { "type": "contains", "value": "InMemoryInvoiceRepository" },
-        { "type": "custom", "description": "Factory must generate nested LineItems array with at least product and quantity fields" },
-        { "type": "custom", "description": "Must include a test that overrides specific LineItem data using .build() with nested overrides" }
+        {
+          "type": "contains",
+          "value": "Factory.define"
+        },
+        {
+          "type": "contains",
+          "value": "items"
+        },
+        {
+          "type": "contains",
+          "value": ".build("
+        },
+        {
+          "type": "contains",
+          "value": "InMemoryInvoiceRepository"
+        },
+        {
+          "type": "custom",
+          "description": "Factory must generate nested LineItems array with at least product and quantity fields"
+        },
+        {
+          "type": "custom",
+          "description": "Must include a test that overrides specific LineItem data using .build() with nested overrides"
+        }
       ],
-      "files": []
+      "files": [],
+      "expectations": [
+        "Factory defines an Invoice with a nested items array of product and quantity",
+        "At least one test uses .build() with nested items overrides",
+        "Uses InMemoryInvoiceRepository",
+        "Mocks TaxCalculator",
+        "Uses setup() and AAA comments"
+      ]
     },
     {
       "id": 5,
       "prompt": "Mi proyecto usa Vitest. Generame tests para un use case 'CancelSubscription' que depende de 'SubscriptionRepository' y 'BillingGateway'. Usa Result types.",
       "expected_output": "The skill MUST detect Vitest from the user's statement and use vitest-mock-extended import instead of jest-mock-extended. All other patterns (setup, AAA, Fakes, naming) must remain the same.",
       "assertions": [
-        { "type": "contains", "value": "vitest-mock-extended" },
-        { "type": "not_contains", "value": "jest-mock-extended" },
-        { "type": "contains", "value": "setup" },
-        { "type": "contains", "value": "InMemory" },
-        { "type": "contains", "value": "isOk()" },
-        { "type": "contains", "value": "isErr()" },
-        { "type": "custom", "description": "Must use 'vitest-mock-extended' import, never 'jest-mock-extended', since user specified Vitest" }
+        {
+          "type": "contains",
+          "value": "vitest-mock-extended"
+        },
+        {
+          "type": "not_contains",
+          "value": "jest-mock-extended"
+        },
+        {
+          "type": "contains",
+          "value": "setup"
+        },
+        {
+          "type": "contains",
+          "value": "InMemory"
+        },
+        {
+          "type": "contains",
+          "value": "isOk()"
+        },
+        {
+          "type": "contains",
+          "value": "isErr()"
+        },
+        {
+          "type": "custom",
+          "description": "Must use 'vitest-mock-extended' import, never 'jest-mock-extended', since user specified Vitest"
+        }
+      ],
+      "files": [],
+      "expectations": [
+        "Imports from vitest-mock-extended and never jest-mock-extended",
+        "Uses vi (not jest) for any timer or mock helpers",
+        "Defines setup() with an InMemory subscription repository",
+        "Asserts Result with isOk()/isErr()",
+        "Covers subscription not found and billing failure"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Escribe los tests unitarios para el use case 'RedeemPasswordResetToken'. Depende de 'ResetTokenRepository' y 'UserRepository'. El token expira 30 minutos después de emitirse y el use case compara contra new Date(). Usa Jest y excepciones.",
+      "expected_output": "The skill MUST make time deterministic: fixed system time with jest.useFakeTimers().setSystemTime, or an injected Clock. Tests cover valid token, expired token, and token exactly at expiry, with fake timers restored in afterEach. Factory uses fixed dates and a seeded Faker.",
+      "expectations": [
+        "Uses jest.useFakeTimers with setSystemTime or an injected Clock port",
+        "Does not use the real current time for expected values",
+        "Covers a valid token, an expired token, and a token exactly at the expiry boundary",
+        "Restores timers in afterEach (jest.useRealTimers)",
+        "Uses InMemoryResetTokenRepository and setup() with AAA comments"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "Generate Vitest tests for 'ChargeSubscription' use case. It calls 'PaymentGateway.charge' and retries up to 3 times with exponential backoff (1s, 2s, 4s) when the gateway throws a TimeoutError. Depends on 'SubscriptionRepository' and 'PaymentGateway'. Use exceptions.",
+      "expected_output": "The skill MUST use vi.useFakeTimers and advance timers (advanceTimersByTimeAsync) instead of real waiting, await all promises, and cover eventual success after retries and failure after the retries are exhausted.",
+      "expectations": [
+        "Uses vi.useFakeTimers and vi.advanceTimersByTimeAsync (or equivalent), no real sleeps",
+        "Awaits every async call and uses rejects.toThrow for the exhausted case",
+        "Asserts the gateway charge call count for retry behavior",
+        "Covers success after a transient failure and failure after retries are exhausted",
+        "Imports vitest-mock-extended and restores real timers in afterEach"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Write Jest tests for 'RegisterCustomer' use case. Input has email, phone, taxId and age. There are many invalid inputs: malformed emails, empty or too short phone, taxId with wrong check digit, age below 18 or above 120. Depends on 'CustomerRepository'. Use exceptions.",
+      "expected_output": "The skill MUST group the invalid inputs in a declarative it.each table with named rows, with no if/for inside the test body, plus a happy path test and a duplicate-email case.",
+      "expectations": [
+        "Uses it.each or test.each with a table of invalid inputs",
+        "Table rows are named (a name field or $name in the title)",
+        "No if, for, or ternary inside any test body",
+        "Includes boundary values for age (17, 18, 120, 121)",
+        "Has a happy path persisted in InMemoryCustomerRepository and uses setup() with AAA comments"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "Generate Vitest tests for 'PlaceOrder' use case with Result types. Flow: reserve stock via 'InventoryService', save order in 'OrderRepository', then notify via 'NotificationService'. Test what happens when InventoryService.reserve throws mid-flow, and when NotificationService throws after the order is saved.",
+      "expected_output": "The skill MUST cover dependency-throws and partial-failure cases: when reserve throws no order is persisted; when notification throws the outcome is defined and state stays consistent. Assertions verify the InMemory repository state, not only mock calls.",
+      "expectations": [
+        "Has a test where InventoryService.reserve rejects and asserts no order exists in the fake repository",
+        "Has a test where NotificationService rejects after save and asserts the defined outcome and repository state",
+        "Uses InMemoryOrderRepository and mocks the other ports",
+        "Does not assert call order between ports",
+        "Imports vitest-mock-extended and uses setup() with AAA comments"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "Write Vitest tests for a 'RefundOrder' use case. It loads the order from 'OrderRepository', asks 'PaymentMethodLookup.findByOrderId(orderId)' for the payment method ('CARD' or 'BANK_TRANSFER'), then calls 'PaymentGateway.refund(orderId, amount, reason)'. Card refunds go through immediately and return { status: 'REFUNDED' }; bank transfer refunds return { status: 'PENDING' }. The gateway must be called with the right order id, the full order amount, and the reason given in the input. Use Result types.",
+      "expected_output": "The skill MUST stub the gateway and the lookup per argument (calledWith with the specific orderId, amount and reason, or matchers), not with a blanket mockResolvedValue, so a wrong id, amount or reason makes the test fail. Covers CARD and BANK_TRANSFER outcomes, order not found, and asserts persisted state in an InMemory repository.",
+      "expectations": [
+        "Stubs PaymentGateway.refund with calledWith using the specific orderId, amount and reason (literals or matchers) instead of a blanket mockResolvedValue",
+        "Stubs the payment method lookup per orderId so CARD and BANK_TRANSFER produce different refund outcomes",
+        "Imports mock and matchers from vitest-mock-extended and does not use vi.fn or jest-mock-extended",
+        "Covers the REFUNDED outcome, the PENDING outcome, and order not found, with persisted state asserted on InMemoryOrderRepository",
+        "Uses setup(), AAA comments, and does not assert call order between ports"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "Generate Jest tests for the 'SendInvoiceReminders' use case. For each overdue invoice it sends an email through 'EmailService.send(to, subject, body)' when the customer has an email, or an SMS through 'SmsService.send(phone, text)' when the customer only has a phone. Customers with neither are skipped and reported in the result. The tests must make sure the use case never contacts a channel it should not use for a given customer. Throwing use case, no Result type.",
+      "expected_output": "The skill MUST make unstubbed calls fail loudly: the EmailService and SmsService mocks are strict (a fallback implementation that throws), so an email-only customer triggering an SMS call, or the reverse, fails the test instead of silently returning undefined. Uses jest-mock-extended, covers email, sms, and neither cases.",
+      "expectations": [
+        "Creates the EmailService and SmsService mocks with a fallbackMockImplementation that throws on unstubbed calls",
+        "Stubs only the channel expected in each test, so an unexpected call to the other channel fails the test",
+        "Imports mock from jest-mock-extended and does not use jest.fn for the ports",
+        "Covers email customer, phone-only customer, and customer with neither channel, with no if or for in test bodies",
+        "Uses setup(), AAA comments, and asserts the returned summary or reported skipped customers"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "prompt": "Write Vitest tests for a 'PublishArticle' use case. It loads the article from 'ArticleRepository', marks it as published with the current time from an injected 'Clock', saves it, and then records an audit entry by calling 'AuditLogger.record(event)'. The AuditEvent is built inside the use case (type, articleId, actorId, occurredAt, and a 'changes' object with the previous and new status). Callers cannot see that object, but the audit trail must contain the right data. Use Result types.",
+      "expected_output": "The skill MUST assert the full structure of the AuditEvent the use case passes to AuditLogger.record by capturing the argument (captor) and comparing it with toStrictEqual, including occurredAt from the fixed Clock and the changes object, rather than expect.anything() or objectContaining on a few fields.",
+      "expectations": [
+        "Captures the argument passed to AuditLogger.record using captor from vitest-mock-extended",
+        "Asserts the captured event with toStrictEqual, including type, articleId, actorId, occurredAt and the changes object",
+        "Uses a fixed Clock (injected port or fake timers) so occurredAt is deterministic",
+        "Asserts the published article state on InMemoryArticleRepository and covers article not found",
+        "Uses setup(), AAA comments, imports from vitest-mock-extended, and does not use expect.anything() for the event fields"
       ],
       "files": []
     }

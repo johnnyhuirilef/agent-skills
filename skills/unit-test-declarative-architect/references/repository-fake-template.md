@@ -1,75 +1,53 @@
 # In-Memory Repository Pattern (Fakes)
 
-Manual Fakes for persistence that implement the real repository interface. Use Fakes instead of library mocks for repositories to enable **state verification** — assert what was persisted, not just that `save` was called.
+Manual Fakes for persistence that implement the real repository interface. Use Fakes instead of library mocks for repositories to enable **state verification**: assert what was persisted, not that `save` was called (TST-1, TST-2).
 
 ## Structure
 
 ```typescript
-import { type Order } from './order';
-import { type OrderId } from './order-id';
+import { Order, type OrderId, type OrderPrimitives, type OrderStatus } from './order';
 import { type OrderRepository } from './order.repository';
-import { ResourceNotFoundError } from './errors';
 
 export class InMemoryOrderRepository implements OrderRepository {
-  private readonly items = new Map<string, Order>();
+  private readonly items = new Map<string, OrderPrimitives>();
 
-  async save(entity: Order): Promise<void> {
-    this.items.set(entity.id.value, entity);
-  }
-
-  async update(entity: Order): Promise<void> {
-    this.items.set(entity.id.value, entity);
-  }
-
-  async delete(id: OrderId): Promise<void> {
-    this.items.delete(id.value);
+  async save(order: Order): Promise<void> {
+    this.items.set(order.id.value, structuredClone(order.toPrimitives()));
   }
 
   async findById(id: OrderId): Promise<Order | null> {
-    return this.items.get(id.value) ?? null;
+    const stored = this.items.get(id.value);
+    return stored ? Order.fromPrimitives(structuredClone(stored)) : null;
   }
 
-  async findAll(): Promise<Order[]> {
-    return Array.from(this.items.values());
-  }
-
-  async findByCustomerId(customerId: string): Promise<Order[]> {
-    return Array.from(this.items.values()).filter(
-      (order) => order.customerId.value === customerId,
-    );
-  }
-
-  async findByStatus(status: string): Promise<Order[]> {
-    return Array.from(this.items.values()).filter(
-      (order) => order.status.value === status,
-    );
-  }
-
-  clear(): void {
-    this.items.clear();
+  async findByStatus(status: OrderStatus): Promise<Order[]> {
+    return [...this.items.values()]
+      .filter((stored) => stored.status === status)
+      .map((stored) => Order.fromPrimitives(structuredClone(stored)));
   }
 }
 ```
 
+The Fake stores a copy and rebuilds the entity on every read. If it stored the entity reference, a SUT that mutates the entity but forgets to call `save` would still look persisted.
+
 ## State Verification in Tests
 
-The primary advantage of Fakes: assert **actual persisted state** rather than mock call counts.
+```typescript
+// Don't: mock verification couples the test to the call, not the outcome
+expect(mockRepository.save).toHaveBeenCalledWith(expect.anything());
+```
 
 ```typescript
-// ❌ Mock verification — fragile, tests implementation
-expect(mockRepository.save).toHaveBeenCalledWith(expect.anything());
-
-// ✅ State verification — tests behaviour
+// Do: read the persisted state back; this fails when nothing was saved
 const saved = await repository.findById(order.id);
-expect(saved).toBeDefined();
-expect(saved?.status.value).toBe('COMPLETED');
+expect(saved?.toPrimitives()).toStrictEqual({ ...primitives, status: 'COMPLETED' });
 ```
 
 ## Rules
 
-1. **Map-based storage**: Use `Map<string, Entity>` for O(1) lookups and deterministic behaviour.
-2. **Implement the real interface**: The Fake must implement the same `Repository` interface used in production code.
-3. **All methods async**: Keep the same `Promise` signatures as the real implementation for drop-in compatibility.
-4. **Query methods**: Implement domain-specific queries (`findByCustomerId`, `findByStatus`) using `Array.filter` over Map values.
-5. **No external dependencies**: Fakes must be pure in-memory with zero setup cost.
-6. **State verification over call verification**: In the Assert block, query the Fake to check what was persisted. This tests behaviour, not implementation.
+1. **Map-based storage**: Use `Map<string, Primitives>` keyed by id for deterministic lookups.
+2. **Implement the real interface**: Implement every method of the production `Repository` interface, with the same `Promise` signatures, and nothing more. No test-only helpers such as `clear()`: a fresh `setup()` per test replaces them (DET-8).
+3. **Query methods**: Implement a query such as `findByStatus` with `Array.filter` over stored values, using the same field names as the factory.
+4. **Copies, not references**: Store `structuredClone(entity.toPrimitives())` and return `Entity.fromPrimitives(...)` so later mutation cannot change persisted state.
+5. **No external dependencies**: Fakes are pure in-memory with zero setup cost.
+6. **State verification**: In the Assert block, query the Fake with an assertion that fails on `null` (`toStrictEqual`, or a field check through `?.`). Never `toBeDefined`: it passes for `null`.
