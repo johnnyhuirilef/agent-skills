@@ -1,0 +1,48 @@
+{
+  "transfer": {
+    "file": "src/transfer/TransferFunds.ts",
+    "mutants": [
+      {"id": "HT1", "desc": "failed credit is compensated but the error is swallowed", "find": "      throw error;\n", "repl": ""},
+      {"id": "HT2", "desc": "credit saved before debit (failed debit leaves money created)", "find": "    await this.accounts.save(debited);\n    try {\n      await this.accounts.save(credited);", "repl": "    await this.accounts.save(credited);\n    try {\n      await this.accounts.save(debited);"},
+      {"id": "HT3", "desc": "transaction log is fire-and-forget instead of awaited", "find": "await this.logger.log(", "repl": "void this.logger.log("},
+      {"id": "HT4", "desc": "log entry amount is the new source balance", "find": "fromId, toId, amountCents, at:", "repl": "fromId, toId, amountCents: debited.balanceCents, at:"},
+      {"id": "HT5", "desc": "log entry swaps fromId and toId", "find": "type: 'TRANSFER', fromId, toId,", "repl": "type: 'TRANSFER', fromId: toId, toId: fromId,"},
+      {"id": "HT6", "desc": "frozen destination is also rejected", "find": "if (from.status === 'FROZEN')", "repl": "if (from.status === 'FROZEN' || to.status === 'FROZEN')"},
+      {"id": "HT7", "desc": "non-integer amount accepted", "find": "!Number.isInteger(amountCents) || amountCents <= 0", "repl": "amountCents <= 0"},
+      {"id": "HT8", "desc": "same-account check ignores case", "find": "if (fromId === toId)", "repl": "if (fromId.toLowerCase() === toId.toLowerCase())"},
+      {"id": "HT9", "desc": "empty account id passes validation", "find": "v.length > 0", "repl": "v.length >= 0"},
+      {"id": "HT10", "desc": "frozen check runs before currency check", "find": "    if (from.currency !== to.currency) throw new CurrencyMismatchError(from.currency, to.currency);\n    if (from.status === 'FROZEN') throw new AccountFrozenError(from.id);\n", "repl": "    if (from.status === 'FROZEN') throw new AccountFrozenError(from.id);\n    if (from.currency !== to.currency) throw new CurrencyMismatchError(from.currency, to.currency);\n"}
+    ]
+  },
+  "auth": {
+    "file": "src/auth/ResetPassword.ts",
+    "mutants": [
+      {"id": "HA1", "desc": "password of exactly the minimum length rejected", "find": "newPassword.length < MIN_PASSWORD_LENGTH", "repl": "newPassword.length <= MIN_PASSWORD_LENGTH"},
+      {"id": "HA2", "desc": "token expires 1 ms before the TTL", "find": "resetToken.issuedAt.getTime() + TOKEN_TTL_MS)", "repl": "resetToken.issuedAt.getTime() + TOKEN_TTL_MS - 1)"},
+      {"id": "HA3", "desc": "token marked used before the new password is saved", "find": "    await this.users.save({ ...user, passwordHash });\n    await this.tokens.save({ ...resetToken, usedAt: this.clock.now() });", "repl": "    await this.tokens.save({ ...resetToken, usedAt: this.clock.now() });\n    await this.users.save({ ...user, passwordHash });"},
+      {"id": "HA4", "desc": "password trimmed before hashing", "find": "this.hasher.hash(newPassword)", "repl": "this.hasher.hash(newPassword.trim())"},
+      {"id": "HA5", "desc": "length rule counts the trimmed password", "find": "newPassword.length < MIN_PASSWORD_LENGTH", "repl": "newPassword.trim().length < MIN_PASSWORD_LENGTH"},
+      {"id": "HA6", "desc": "token lowercased before lookup", "find": "findByToken(token)", "repl": "findByToken(token.toLowerCase())"},
+      {"id": "HA7", "desc": "saved token gets issuedAt overwritten", "find": "{ ...resetToken, usedAt: this.clock.now() }", "repl": "{ ...resetToken, issuedAt: now, usedAt: this.clock.now() }"},
+      {"id": "HA8", "desc": "user save is fire-and-forget instead of awaited", "find": "await this.users.save(", "repl": "void this.users.save("},
+      {"id": "HA9", "desc": "missing user reported as a validation error instead of an invalid token", "find": "if (!user) throw new InvalidTokenError();", "repl": "if (!user) throw new ValidationError('User not found');"},
+      {"id": "HA10", "desc": "password validated only after the token lookup", "find": "    if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH) {\n      throw new ValidationError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);\n    }\n\n    const resetToken = await this.tokens.findByToken(token);\n    if (!resetToken) throw new InvalidTokenError();\n", "repl": "\n    const resetToken = await this.tokens.findByToken(token);\n    if (!resetToken) throw new InvalidTokenError();\n    if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH) {\n      throw new ValidationError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);\n    }\n"}
+    ]
+  },
+  "billing": {
+    "file": "src/billing/ChargeSubscription.ts",
+    "mutants": [
+      {"id": "HB1", "desc": "first backoff 1000 to 500", "find": "const RETRY_DELAYS_MS = [1000, 2000, 4000];", "repl": "const RETRY_DELAYS_MS = [500, 2000, 4000];"},
+      {"id": "HB2", "desc": "second and third backoff swapped (same total)", "find": "const RETRY_DELAYS_MS = [1000, 2000, 4000];", "repl": "const RETRY_DELAYS_MS = [1000, 4000, 2000];"},
+      {"id": "HB3", "desc": "idempotency key uses epoch millis instead of ISO date", "find": "subscription.periodStart.toISOString()", "repl": "subscription.periodStart.getTime()"},
+      {"id": "HB4", "desc": "idempotency key separator ':' to '-'", "find": "`${subscriptionId}:${", "repl": "`${subscriptionId}-${"},
+      {"id": "HB5", "desc": "failed charge also stamps lastChargedAt", "find": "subscription.withStatus('PAST_DUE')", "repl": "subscription.withStatus('PAST_DUE').withLastChargedAt(this.clock.now())"},
+      {"id": "HB6", "desc": "successful charge keeps the previous status", "find": "subscription.withStatus('ACTIVE').withLastChargedAt(this.clock.now())", "repl": "subscription.withLastChargedAt(this.clock.now())"},
+      {"id": "HB7", "desc": "ChargeFailedError loses its cause", "find": "throw new ChargeFailedError(subscriptionId, { cause: lastError });", "repl": "throw new ChargeFailedError(subscriptionId);"},
+      {"id": "HB8", "desc": "cause is the first error instead of the last", "find": "lastError = error;", "repl": "lastError ??= error;"},
+      {"id": "HB9", "desc": "success save is fire-and-forget instead of awaited", "find": "        await this.subscriptions.save(\n          subscription.withStatus('ACTIVE')", "repl": "        void this.subscriptions.save(\n          subscription.withStatus('ACTIVE')"},
+      {"id": "HB10", "desc": "PAST_DUE subscriptions rejected as cancelled", "find": "subscription.status === 'CANCELLED'", "repl": "subscription.status !== 'ACTIVE'"},
+      {"id": "HB11", "desc": "failure persists the subscription unchanged", "find": "save(subscription.withStatus('PAST_DUE'))", "repl": "save(subscription)"}
+    ]
+  }
+}

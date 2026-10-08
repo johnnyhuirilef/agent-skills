@@ -1,0 +1,115 @@
+{
+  "name": "payments-errors",
+  "required": [
+    {
+      "id": "I2-C1",
+      "rule": "Abstract DomainError base extends Error",
+      "regex": [
+        "abstract\\s+class\\s+DomainError\\s+extends\\s+Error"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I2-C2",
+      "rule": "Base declares abstract readonly code: string",
+      "regex": [
+        "abstract\\s+readonly\\s+code\\s*:\\s*string"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I2-C3",
+      "rule": "Base fixes instanceof via Object.setPrototypeOf(this, new.target.prototype)",
+      "regex": [
+        "setPrototypeOf\\s*\\(\\s*this\\s*,\\s*new\\.target\\.prototype"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I2-C4",
+      "rule": "All concrete errors extend DomainError",
+      "regex": [
+        "class\\s+PaymentNotFoundError\\s+extends\\s+(DomainError|DomainBusinessError|DomainValidationError|NotFoundError|ExternalServiceError|SystemError)",
+        "class\\s+InsufficientFundsError\\s+extends\\s+(DomainError|DomainBusinessError|DomainValidationError|NotFoundError|ExternalServiceError|SystemError)",
+        "class\\s+InvalidPaymentStateTransitionError\\s+extends\\s+(DomainError|DomainBusinessError|DomainValidationError|NotFoundError|ExternalServiceError|SystemError)",
+        "class\\s+PaymentGatewayUnavailableError\\s+extends\\s+(DomainError|DomainBusinessError|DomainValidationError|NotFoundError|ExternalServiceError|SystemError)"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I2-C5",
+      "rule": "resource.* and business.* code prefixes",
+      "regex": [
+        "['\\\"]resource\\.[a-z-]+['\\\"]",
+        "['\\\"]business\\.[a-z-]+['\\\"]"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I2-C6",
+      "rule": "external.*, validation.* and auth.* code prefixes",
+      "regex": [
+        "['\\\"]external\\.[a-z-]+['\\\"]",
+        "['\\\"]validation\\.[a-z-]+['\\\"]",
+        "['\\\"]auth\\.[a-z-]+['\\\"]"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I2-C7",
+      "rule": "concurrency.* prefix for stale version",
+      "regex": [
+        "['\\\"]concurrency\\.[a-z-]+['\\\"]"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I2-C8",
+      "rule": "No HTTP status inside DomainError classes",
+      "regex": [
+        "class\\s+\\w+Error\\s+extends\\s+DomainError"
+      ],
+      "must_not_regex": [
+        "extends\\s+DomainError\\s*\\{[^}]*(httpStatus|statusCode|\\bstatus\\b)"
+      ]
+    },
+    {
+      "id": "I2-C9",
+      "rule": "Application layer catches DomainError and maps by code/prefix",
+      "regex": [
+        "instanceof\\s+DomainError",
+        "\\.code\\b"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I2-C10",
+      "rule": "Mapping produces HTTP statuses (404/409/422...)",
+      "regex": [
+        "\\b404\\b",
+        "\\b409\\b"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I2-C11",
+      "rule": "No generic throw new Error from domain",
+      "regex": [
+        "class\\s+PaymentNotFoundError"
+      ],
+      "must_not_regex": [
+        "throw\\s+new\\s+Error\\s*\\("
+      ]
+    },
+    {
+      "id": "I2-C12",
+      "rule": "Domain never swallows its own errors (no empty catch)",
+      "regex": [
+        "class\\s+DomainError|abstract\\s+class\\s+DomainError"
+      ],
+      "must_not_regex": [
+        "catch\\s*(\\([^)]*\\))?\\s*\\{\\s*\\}"
+      ]
+    }
+  ]
+}

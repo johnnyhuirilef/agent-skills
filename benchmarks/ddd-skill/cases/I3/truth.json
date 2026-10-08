@@ -1,0 +1,116 @@
+{
+  "name": "money-email-value-objects",
+  "required": [
+    {
+      "id": "I3-C1",
+      "rule": "Money extends ValueObject",
+      "regex": [
+        "class\\s+Money\\s+extends\\s+ValueObject"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I3-C2",
+      "rule": "Email extends ValueObject",
+      "regex": [
+        "class\\s+Email\\s+extends\\s+ValueObject"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I3-C3",
+      "rule": "Validation in constructor throws DomainValidationError",
+      "regex": [
+        "DomainValidationError"
+      ],
+      "must_not_regex": [
+        "throw\\s+new\\s+Error\\s*\\("
+      ]
+    },
+    {
+      "id": "I3-C4",
+      "rule": "Negative amount rejected",
+      "regex": [
+        "amount\\s*<\\s*0|negative"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I3-C5",
+      "rule": "Value equality via isEqual",
+      "regex": [
+        "isEqual"
+      ],
+      "must_not_regex": [
+        "\\bthis\\s*===\\s*other\\b",
+        "\\bthis\\.value\\s*===\\s*other\\.value\\b"
+      ]
+    },
+    {
+      "id": "I3-C6",
+      "rule": "ToPrimitives conversion provided",
+      "regex": [
+        "toPrimitives|ToPrimitives"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I3-C7",
+      "rule": "Mutation-like ops return a new instance",
+      "regex": [
+        "add\\s*\\([^)]*\\)\\s*:\\s*Money",
+        "return\\s+new\\s+Money"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I3-C8",
+      "rule": "No public setters or public mutable fields",
+      "regex": [
+        "class\\s+Money"
+      ],
+      "must_not_regex": [
+        "\\bset[A-Z]\\w*\\s*\\(",
+        "public\\s+(amount|currency|value)\\s*[:;=]"
+      ]
+    },
+    {
+      "id": "I3-C9",
+      "rule": "No identity field on value objects",
+      "regex": [
+        "class\\s+Email"
+      ],
+      "must_not_regex": [
+        "(readonly|private|public)\\s+id\\s*[:;]",
+        "this\\.id\\b"
+      ]
+    },
+    {
+      "id": "I3-C10",
+      "rule": "Currency mismatch is a DomainBusinessError",
+      "regex": [
+        "DomainBusinessError"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I3-C11",
+      "rule": "No persistence decorators on domain value objects",
+      "regex": [
+        "class\\s+Money"
+      ],
+      "must_not_regex": [
+        "@(Entity|Column|PrimaryGeneratedColumn)\\s*\\("
+      ]
+    },
+    {
+      "id": "I3-C12",
+      "rule": "Email normalization (trim/lowercase)",
+      "regex": [
+        "toLowerCase\\s*\\(",
+        "trim\\s*\\("
+      ],
+      "must_not_regex": []
+    }
+  ]
+}

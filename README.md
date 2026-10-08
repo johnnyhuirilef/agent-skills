@@ -86,6 +86,10 @@ skills/
         └── evals.json
 ```
 
+## Benchmarks
+
+`benchmarks/` holds the tools used to measure skill changes before they are merged: a mutation test for unit-test skills, a scorer for DDD review and implementation answers, and a typecheck of the TypeScript examples inside a skill. See [benchmarks/README.md](benchmarks/README.md) for how to run them and the recorded baselines.
+
 ## Philosophy
 
 - **Deterministic** — consistent output regardless of phrasing

@@ -1,0 +1,60 @@
+{
+  "name": "catalog-aggregate-identity",
+  "defects": [
+    {
+      "id": "R3-D1",
+      "pattern": "Aggregate referencing another AR by object",
+      "severity": "WARNING",
+      "mention_regex": [
+        "Supplier",
+        "object reference",
+        "reference.{0,30}(by|through) (id|identity)",
+        "by id",
+        "snapshot",
+        "another aggregate"
+      ]
+    },
+    {
+      "id": "R3-D2",
+      "pattern": "Identity as bare primitive instead of Value Object",
+      "severity": "WARNING|BLOCKER|CRITICAL",
+      "mention_regex": [
+        "\\bid: string\\b",
+        "bare (primitive|string)",
+        "primitive (obsession|id|identity|type)",
+        "ProductId",
+        "identity.{0,40}(value object|VO)",
+        "typed as a (value object|VO)"
+      ]
+    },
+    {
+      "id": "R3-D3",
+      "pattern": "Persistence-assigned id leaking into domain entity",
+      "severity": "WARNING|BLOCKER|CRITICAL",
+      "mention_regex": [
+        "numericId",
+        "setNumericId",
+        "database[- ](assigned|generated|sequence)",
+        "persistence[- ](assigned|generated)",
+        "auto[- ]?increment",
+        "IdGenerator",
+        "application[- ]generated"
+      ]
+    },
+    {
+      "id": "R3-D4",
+      "pattern": "Aggregate too big (10+ methods / 5+ internal entities)",
+      "severity": "WARNING",
+      "mention_regex": [
+        "\\bCatalog\\b.{0,80}(too (big|large)|boundary)",
+        "too (big|large)",
+        "god aggregate",
+        "consistency boundary",
+        "split(ting)?",
+        "\\bCatalog\\b.{0,40}aggregate",
+        "10\\+|12 methods|six (internal )?(entities|collections)"
+      ]
+    }
+  ],
+  "clean": false
+}

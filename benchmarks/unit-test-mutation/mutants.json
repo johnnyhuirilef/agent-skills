@@ -1,0 +1,47 @@
+{
+  "transfer": {
+    "file": "src/transfer/TransferFunds.ts",
+    "mutants": [
+      {"id": "T1", "desc": "zero amount allowed", "find": "amountCents <= 0", "repl": "amountCents < 0"},
+      {"id": "T2", "desc": "same-account check removed", "find": "    if (fromId === toId) throw new ValidationError('Cannot transfer to the same account');\n", "repl": ""},
+      {"id": "T3", "desc": "currency mismatch check removed", "find": "    if (from.currency !== to.currency) throw new CurrencyMismatchError(from.currency, to.currency);\n", "repl": ""},
+      {"id": "T4", "desc": "frozen check removed", "find": "    if (from.status === 'FROZEN') throw new AccountFrozenError(from.id);\n", "repl": ""},
+      {"id": "T5", "desc": "full-balance transfer blocked", "find": "from.balanceCents < amountCents", "repl": "from.balanceCents <= amountCents"},
+      {"id": "T6", "desc": "compensation save removed", "find": "      await this.accounts.save(from);\n", "repl": ""},
+      {"id": "T7", "desc": "logger failure no longer swallowed", "find": "    } catch {\n      // logging failures must not affect the transfer\n    }", "repl": "    } catch (e) {\n      throw e;\n    }"},
+      {"id": "T8", "desc": "log timestamp ignores clock", "find": "at: this.clock.now()", "repl": "at: new Date(0)"},
+      {"id": "T9", "desc": "returned balances swapped", "find": "return { fromBalanceCents: debited.balanceCents, toBalanceCents: credited.balanceCents };", "repl": "return { fromBalanceCents: credited.balanceCents, toBalanceCents: debited.balanceCents };"},
+      {"id": "T10", "desc": "destination not-found check removed", "find": "    if (!to) throw new NotFoundError('Account', toId);\n", "repl": ""}
+    ]
+  },
+  "auth": {
+    "file": "src/auth/ResetPassword.ts",
+    "mutants": [
+      {"id": "A1", "desc": "expiry boundary off by one (>= to >)", "find": "now.getTime() >= resetToken.issuedAt.getTime() + TOKEN_TTL_MS", "repl": "now.getTime() > resetToken.issuedAt.getTime() + TOKEN_TTL_MS"},
+      {"id": "A2", "desc": "ttl 30 to 31 minutes", "find": "const TOKEN_TTL_MS = 30 * 60 * 1000;", "repl": "const TOKEN_TTL_MS = 31 * 60 * 1000;"},
+      {"id": "A3", "desc": "used-token check removed", "find": "    if (resetToken.usedAt !== null) throw new InvalidTokenError();\n", "repl": ""},
+      {"id": "A4", "desc": "min password length 12 to 11", "find": "const MIN_PASSWORD_LENGTH = 12;", "repl": "const MIN_PASSWORD_LENGTH = 11;"},
+      {"id": "A5", "desc": "user-not-found check removed", "find": "    if (!user) throw new InvalidTokenError();\n", "repl": ""},
+      {"id": "A6", "desc": "usedAt ignores clock", "find": "usedAt: this.clock.now()", "repl": "usedAt: resetToken.issuedAt"},
+      {"id": "A7", "desc": "token never marked used", "find": "    await this.tokens.save({ ...resetToken, usedAt: this.clock.now() });\n", "repl": ""},
+      {"id": "A8", "desc": "new hash not stored", "find": "await this.users.save({ ...user, passwordHash });", "repl": "await this.users.save({ ...user });"},
+      {"id": "A9", "desc": "empty token no longer rejected", "find": "typeof token !== 'string' || token.length === 0", "repl": "typeof token !== 'string'"},
+      {"id": "A10", "desc": "token-not-found check removed", "find": "    if (!resetToken) throw new InvalidTokenError();\n", "repl": ""}
+    ]
+  },
+  "billing": {
+    "file": "src/billing/ChargeSubscription.ts",
+    "mutants": [
+      {"id": "C1", "desc": "last backoff 4000 to 2000", "find": "const RETRY_DELAYS_MS = [1000, 2000, 4000];", "repl": "const RETRY_DELAYS_MS = [1000, 2000, 2000];"},
+      {"id": "C2", "desc": "retries every error, not only timeouts", "find": "!(error instanceof GatewayTimeoutError) || attempt === RETRY_DELAYS_MS.length", "repl": "attempt === RETRY_DELAYS_MS.length"},
+      {"id": "C3", "desc": "cancelled check removed", "find": "    if (subscription.status === 'CANCELLED') throw new SubscriptionCancelledError(subscriptionId);\n", "repl": ""},
+      {"id": "C4", "desc": "idempotency key drops period", "find": "`${subscriptionId}:${subscription.periodStart.toISOString()}`", "repl": "`${subscriptionId}`"},
+      {"id": "C5", "desc": "PAST_DUE never saved", "find": "    await this.subscriptions.save(subscription.withStatus('PAST_DUE'));\n", "repl": ""},
+      {"id": "C6", "desc": "lastChargedAt ignores clock", "find": "withLastChargedAt(this.clock.now())", "repl": "withLastChargedAt(subscription.periodStart)"},
+      {"id": "C7", "desc": "only 3 attempts instead of 4", "find": "attempt <= RETRY_DELAYS_MS.length", "repl": "attempt < RETRY_DELAYS_MS.length"},
+      {"id": "C8", "desc": "success saved as PAST_DUE", "find": "subscription.withStatus('ACTIVE')", "repl": "subscription.withStatus('PAST_DUE')"},
+      {"id": "C9", "desc": "subscription-not-found check removed", "find": "    if (!subscription) throw new NotFoundError('Subscription', subscriptionId);\n", "repl": ""},
+      {"id": "C10", "desc": "gateway amount hardcoded to 0", "find": "amountCents: subscription.amountCents", "repl": "amountCents: 0"}
+    ]
+  }
+}

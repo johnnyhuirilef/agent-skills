@@ -1,0 +1,77 @@
+{
+  "name": "order-module-many-defects",
+  "defects": [
+    {
+      "id": "R1-D1",
+      "pattern": "`@Entity()` TypeORM on domain class",
+      "severity": "BLOCKER",
+      "mention_regex": [
+        "@Entity",
+        "typeorm",
+        "\\bDAO\\b",
+        "persistence (mapper|model|concern)",
+        "@Column",
+        "cardinal"
+      ]
+    },
+    {
+      "id": "R1-D2",
+      "pattern": "Stateful Domain Service field",
+      "severity": "BLOCKER",
+      "mention_regex": [
+        "PricingService",
+        "lastQuote",
+        "quotesIssued",
+        "stateful",
+        "mutable (field|state)",
+        "singleton"
+      ]
+    },
+    {
+      "id": "R1-D3",
+      "pattern": "Entity with no behavior (Anemic Model)",
+      "severity": "CRITICAL",
+      "mention_regex": [
+        "anemic",
+        "\\bCustomer\\b",
+        "no behaviou?r",
+        "public (fields|setters|properties)"
+      ]
+    },
+    {
+      "id": "R1-D4",
+      "pattern": "Direct access to Aggregate internals",
+      "severity": "BLOCKER",
+      "mention_regex": [
+        "items\\[0\\]",
+        "internals?",
+        "bypass",
+        "ChangeItemQuantity",
+        "directly (mutat|modif|access)"
+      ]
+    },
+    {
+      "id": "R1-D5",
+      "pattern": "Injecting EventBus into Aggregate / events published from inside Aggregate",
+      "severity": "CRITICAL",
+      "mention_regex": [
+        "event\\s?bus",
+        "publish\\w*\\s+(from|inside|within)",
+        "injects?\\b.*bus",
+        "pullDomainEvents"
+      ]
+    },
+    {
+      "id": "R1-D6",
+      "pattern": "VO mutated via public setter",
+      "severity": "CRITICAL",
+      "mention_regex": [
+        "\\bQuantity\\b",
+        "setValue",
+        "setter",
+        "immutab"
+      ]
+    }
+  ],
+  "clean": false
+}

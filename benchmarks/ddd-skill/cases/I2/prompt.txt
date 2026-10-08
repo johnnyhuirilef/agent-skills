@@ -1,0 +1,9 @@
+Implement the payments domain error taxonomy and the application-layer mapping to HTTP.
+
+This is Implementation mode. I already answered your Ambiguity Gate questions below and I approve the Turn 1 domain model in advance, so do NOT stop and ask: go straight to the full Turn 2 output (DDD Decision Log, then the code, in the order your workflow prescribes).
+- Bounded Context / Module: payments
+- Aggregate Root: Payment
+- Invariants: only a PENDING payment can be captured; amounts must be positive.
+- Domain events: none for this task.
+
+Nothing exists yet for errors: define the DomainError base class yourself. Required concrete errors: PaymentNotFoundError, InsufficientFundsError, InvalidPaymentStateTransitionError, InvalidCardNumberError, StalePaymentVersionError, PaymentGatewayUnavailableError, PaymentUnauthorizedError. Then write the application-layer function or filter that maps any thrown DomainError to an HTTP response (status + body).

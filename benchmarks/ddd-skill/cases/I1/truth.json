@@ -1,0 +1,117 @@
+{
+  "name": "order-aggregate",
+  "required": [
+    {
+      "id": "I1-C1",
+      "rule": "Aggregate uses a private constructor",
+      "regex": [
+        "private\\s+constructor"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I1-C2",
+      "rule": "Aggregate exposes a public static factory",
+      "regex": [
+        "static\\s+(create|place|open|start)\\w*\\s*\\("
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I1-C3",
+      "rule": "Order extends AggregateRoot",
+      "regex": [
+        "class\\s+Order\\s+extends\\s+AggregateRoot"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I1-C4",
+      "rule": "No TypeORM @Entity() on domain classes",
+      "regex": [
+        "class\\s+Order\\b"
+      ],
+      "must_not_regex": [
+        "@Entity\\s*\\("
+      ]
+    },
+    {
+      "id": "I1-C5",
+      "rule": "Identity is a Value Object (OrderId), not a bare primitive",
+      "regex": [
+        "class\\s+OrderId\\s+extends\\s+ValueObject"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I1-C6",
+      "rule": "OrderLine is an immutable Value Object",
+      "regex": [
+        "class\\s+OrderLine\\s+extends\\s+ValueObject",
+        "readonly"
+      ],
+      "must_not_regex": [
+        "public\\s+(?!readonly)(quantity|unitPrice|productId)\\s*[:;=]"
+      ]
+    },
+    {
+      "id": "I1-C7",
+      "rule": "Domain events named in past tense",
+      "regex": [
+        "class\\s+OrderPlaced\\b",
+        "class\\s+OrderPaid\\b",
+        "class\\s+OrderShipped\\b",
+        "class\\s+OrderCancell?ed\\b"
+      ],
+      "must_not_regex": [
+        "class\\s+Order(Place|Pay|Ship|Cancel|Create)(Event)?\\b"
+      ]
+    },
+    {
+      "id": "I1-C8",
+      "rule": "Static EVENT_NAME follows <context>.<event-name>.<version>",
+      "regex": [
+        "EVENT_NAME\\s*=\\s*['\\\"][a-z0-9-]+\\.[a-z0-9-]+\\.v\\d+['\\\"]"
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I1-C9",
+      "rule": "Events provide fromPrimitives()",
+      "regex": [
+        "fromPrimitives\\s*\\("
+      ],
+      "must_not_regex": []
+    },
+    {
+      "id": "I1-C10",
+      "rule": "Invariant violations throw DomainError subclasses, never raw Error",
+      "regex": [
+        "extends\\s+DomainError|DomainBusinessError"
+      ],
+      "must_not_regex": [
+        "throw\\s+new\\s+Error\\s*\\("
+      ]
+    },
+    {
+      "id": "I1-C11",
+      "rule": "Events collected in aggregate, drained by pullDomainEvents in application layer after persist",
+      "regex": [
+        "addDomainEvent\\s*\\(",
+        "pullDomainEvents\\s*\\("
+      ],
+      "must_not_regex": [
+        "this\\.eventBus"
+      ],
+      "scope_regex": "extends\\s+AggregateRoot"
+    },
+    {
+      "id": "I1-C12",
+      "rule": "Time comes from a Clock, not new Date() in the aggregate",
+      "regex": [
+        "clock"
+      ],
+      "must_not_regex": []
+    }
+  ]
+}

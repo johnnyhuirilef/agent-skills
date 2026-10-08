@@ -1,0 +1,113 @@
+Here is our customers module domain code. Please review it from a DDD perspective.
+
+`src/customers/domain/model/customer-id.vo.ts`
+```ts
+export class CustomerId extends ValueObject<string> {
+  constructor(value: string) {
+    super(ensureValidUuid(value));
+  }
+
+  static generate(idGenerator: IdGenerator): CustomerId {
+    return new CustomerId(idGenerator.next());
+  }
+
+  toPrimitives(): string {
+    return this.value;
+  }
+}
+```
+
+`src/customers/domain/model/email.vo.ts`
+```ts
+function ensureValidEmail(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalized)) {
+    throw new DomainValidationError(`Invalid email: ${value}`);
+  }
+  return normalized;
+}
+
+export class Email extends ValueObject<string> {
+  constructor(value: string) {
+    super(ensureValidEmail(value));
+  }
+
+  toPrimitives(): string {
+    return this.value;
+  }
+}
+```
+
+`src/customers/domain/model/customer.aggregate.ts`
+```ts
+export class Customer extends AggregateRoot<CustomerId, CustomerEvent> {
+  private constructor(
+    id: CustomerId,
+    private email: Email,
+    private status: CustomerStatus,
+  ) {
+    super(id);
+  }
+
+  static register(id: CustomerId, email: Email, deps: DomainDeps = {}): Customer {
+    const { clock = systemClock } = deps;
+    const customer = new Customer(id, email, CustomerStatus.ACTIVE);
+    customer.addDomainEvent(
+      new CustomerRegistered({ customerId: id.toPrimitives(), registeredAt: clock.now().toISOString() }),
+    );
+    return customer;
+  }
+
+  changeEmail(email: Email): void {
+    if (this.status === CustomerStatus.DEACTIVATED) throw new CustomerDeactivatedError(this.id.toPrimitives());
+    this.email = email;
+  }
+
+  deactivate(): void {
+    if (this.status === CustomerStatus.DEACTIVATED) throw new CustomerDeactivatedError(this.id.toPrimitives());
+    this.status = CustomerStatus.DEACTIVATED;
+  }
+}
+```
+
+`src/customers/domain/model/customer.events.ts`
+```ts
+export class CustomerRegistered extends DomainEvent<{ customerId: string; registeredAt: string }> {
+  static readonly EVENT_NAME = 'customers.customer-registered.v1';
+  readonly eventName = CustomerRegistered.EVENT_NAME;
+  readonly occurredAt = new Date();
+
+  constructor(readonly payload: { customerId: string; registeredAt: string }) {
+    super();
+  }
+
+  fromPrimitives(data: unknown): CustomerRegistered {
+    return new CustomerRegistered(data as { customerId: string; registeredAt: string });
+  }
+}
+```
+
+`src/customers/domain/port/customer.repository.ts`
+```ts
+export abstract class CustomerRepositoryPort {
+  abstract findById(id: CustomerId): Promise<Customer>;
+  abstract save(customer: Customer): Promise<void>;
+}
+```
+
+`src/customers/application/command/deactivate-customer.handler.ts`
+```ts
+export class DeactivateCustomerHandler {
+  constructor(
+    private readonly repo: CustomerRepositoryPort,
+    private readonly eventBus: EventBusPort,
+  ) {}
+
+  async execute(cmd: { customerId: string }): Promise<void> {
+    const customer = await this.repo.findById(new CustomerId(cmd.customerId));
+    customer.deactivate();
+    await this.repo.save(customer);
+    await this.eventBus.publish(customer.pullDomainEvents());
+  }
+}
+```

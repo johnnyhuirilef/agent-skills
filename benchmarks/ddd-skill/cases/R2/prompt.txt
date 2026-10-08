@@ -1,0 +1,74 @@
+We are restructuring our billing code. Could you review it from a DDD point of view? Folder layout and the key files:
+
+```
+src/
+  utils/billing-helpers.ts
+  events/billing-events.ts
+  shoppingAndInvoice/
+    domain/invoice.entity.ts
+    domain/tax-calculation.service.ts
+    infrastructure/invoice.typeorm.repository.ts
+```
+
+`src/utils/billing-helpers.ts`
+```ts
+export function formatInvoiceNumber(seq: number): string {
+  return `INV-${String(seq).padStart(8, '0')}`;
+}
+export function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+```
+
+`src/events/billing-events.ts`
+```ts
+export class InvoiceIssued {
+  static readonly EVENT_NAME = 'billing.invoice-issued.v1';
+  constructor(readonly payload: { invoiceId: string }) {}
+}
+export class PaymentReceived {
+  static readonly EVENT_NAME = 'billing.payment-received.v1';
+  constructor(readonly payload: { invoiceId: string; amount: number }) {}
+}
+export class SubscriptionRenewed {
+  static readonly EVENT_NAME = 'subscriptions.subscription-renewed.v1';
+  constructor(readonly payload: { subscriptionId: string }) {}
+}
+```
+
+`src/shoppingAndInvoice/domain/invoice.entity.ts`
+```ts
+import { InvoiceTypeOrmRepository } from '../infrastructure/invoice.typeorm.repository';
+import { formatInvoiceNumber } from '../../utils/billing-helpers';
+
+export class Invoice extends Entity<InvoiceId> {
+  private paid = false;
+  private readonly repo = new InvoiceTypeOrmRepository();
+
+  constructor(id: InvoiceId, private readonly seq: number) {
+    super(id);
+  }
+
+  async markAsPaid(): Promise<void> {
+    if (this.paid) throw new InvoiceAlreadyPaidError(this.id.toPrimitives());
+    this.paid = true;
+    await this.repo.save(this);
+  }
+
+  number(): string {
+    return formatInvoiceNumber(this.seq);
+  }
+}
+```
+
+`src/shoppingAndInvoice/domain/tax-calculation.service.ts`
+```ts
+import axios from 'axios';
+
+export class TaxCalculationService {
+  async calculate(country: string, net: Money): Promise<Money> {
+    const res = await axios.get(`https://tax-api.example.com/rates/${country}`);
+    return net.multiply(res.data.rate);
+  }
+}
+```
