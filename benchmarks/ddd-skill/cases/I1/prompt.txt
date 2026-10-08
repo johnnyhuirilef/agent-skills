@@ -1,0 +1,10 @@
+Implement an Order aggregate in TypeScript.
+
+This is Implementation mode. I already answered your Ambiguity Gate questions below and I approve the Turn 1 domain model in advance, so do NOT stop and ask: go straight to the full Turn 2 output (DDD Decision Log, then the code, in the order your workflow prescribes).
+- Bounded Context / Module: orders
+- Aggregate Root: Order, containing OrderLine value objects (productId, quantity, unit price as Money)
+- Invariants: an order needs at least one line to be placed; status transitions allowed only PLACED -> PAID -> SHIPPED, and PLACED or PAID -> CANCELLED; a shipped order cannot be cancelled.
+- Domain events: order placed, order paid, order shipped, order cancelled.
+- Identity: application-generated UUID.
+
+Assume these already exist and import them from '@domain-kernel': ValueObject<T> (protected readonly value, isEqual), Entity<Id>, AggregateRoot<Id, Event> (addDomainEvent / pullDomainEvents), DomainEvent<Payload>, DomainError (abstract, with abstract code), DomainValidationError, DomainBusinessError, Clock and IdGenerator ports. Include the repository port, an application command handler for paying an order, and an in-memory fake.

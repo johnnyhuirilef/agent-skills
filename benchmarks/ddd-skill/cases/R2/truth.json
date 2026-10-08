@@ -1,0 +1,68 @@
+{
+  "name": "billing-module-naming-and-layers",
+  "defects": [
+    {
+      "id": "R2-D1",
+      "pattern": "Module/folder named `utils`",
+      "severity": "BLOCKER|CRITICAL",
+      "mention_regex": [
+        "\\butils\\b",
+        "billing-helpers",
+        "garbage",
+        "no (business|semantic) meaning",
+        "helpers?\\b"
+      ]
+    },
+    {
+      "id": "R2-D2",
+      "pattern": "`events` module containing all domain events",
+      "severity": "BLOCKER|CRITICAL",
+      "mention_regex": [
+        "\\bevents\\b.{0,40}(module|folder|directory|package)",
+        "billing-events",
+        "events? (belong|should live|must live)",
+        "central(ized|ised)? events"
+      ]
+    },
+    {
+      "id": "R2-D3",
+      "pattern": "Module name with 'and' (`shoppingAndInvoice`)",
+      "severity": "WARNING",
+      "mention_regex": [
+        "shoppingAndInvoice",
+        "\\band\\b.{0,30}(two|multiple) responsibilit",
+        "two responsibilit",
+        "ubiquitous language",
+        "split"
+      ]
+    },
+    {
+      "id": "R2-D4",
+      "pattern": "Entity directly calling Repository / domain importing infrastructure",
+      "severity": "BLOCKER|CRITICAL",
+      "mention_regex": [
+        "InvoiceTypeOrmRepository",
+        "TypeOrm",
+        "entity.{0,50}repositor",
+        "repositor.{0,50}(entity|domain)",
+        "domain.{0,40}(imports?|depends? on).{0,40}infrastructure",
+        "dependency (rule|direction|inversion)"
+      ]
+    },
+    {
+      "id": "R2-D5",
+      "pattern": "Domain Service doing I/O (HTTP call from domain)",
+      "severity": "BLOCKER|CRITICAL",
+      "mention_regex": [
+        "TaxCalculationService",
+        "axios",
+        "\\bHTTP\\b",
+        "I/O",
+        "network",
+        "external (call|api|service)",
+        "port"
+      ]
+    }
+  ],
+  "clean": false
+}

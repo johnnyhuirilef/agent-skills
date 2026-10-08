@@ -1,0 +1,14 @@
+node_modules/
+__pycache__/
+tmp/
+
+# unit-test-mutation: candidate projects and their scores
+unit-test-mutation/projects/
+unit-test-mutation/results/
+
+# ddd-skill: generated model responses and score output
+ddd-skill/responses/
+ddd-skill/*.json
+
+# skill-example-typecheck: extracted blocks
+skill-example-typecheck/runs/

@@ -1,0 +1,90 @@
+Please do a DDD review of this order module of our TypeScript backend. Here are the files.
+
+`src/order/domain/model/money.vo.ts`
+```ts
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+
+@Entity()
+export class Money {
+  @PrimaryGeneratedColumn() id: number;
+  @Column() amount: number;
+  @Column() currency: string;
+
+  add(other: Money): Money {
+    const result = new Money();
+    result.amount = this.amount + other.amount;
+    result.currency = this.currency;
+    return result;
+  }
+}
+```
+
+`src/order/domain/model/quantity.vo.ts`
+```ts
+export class Quantity {
+  constructor(public value: number) {}
+
+  setValue(value: number): void {
+    this.value = value;
+  }
+}
+```
+
+`src/order/domain/service/pricing.service.ts`
+```ts
+export class PricingService {
+  private lastQuote: Money;
+  private quotesIssued = 0;
+
+  constructor(private readonly ratePort: RatePort) {}
+
+  quote(items: OrderItem[]): Money {
+    this.quotesIssued++;
+    this.lastQuote = items.reduce((acc, i) => acc.add(i.price), new Money());
+    return this.lastQuote;
+  }
+}
+```
+
+`src/order/domain/model/customer.entity.ts`
+```ts
+export class Customer {
+  public id: string;
+  public email: string;
+  public isBlocked: boolean;
+  public creditLimit: number;
+}
+```
+
+`src/order/domain/model/order.aggregate.ts`
+```ts
+export class Order extends AggregateRoot<OrderId, OrderEvent> {
+  public items: OrderItem[] = [];
+
+  private constructor(id: OrderId, private readonly eventBus: EventBus) {
+    super(id);
+  }
+
+  static create(id: OrderId, eventBus: EventBus): Order {
+    return new Order(id, eventBus);
+  }
+
+  place(): void {
+    if (this.items.length === 0) throw new DomainBusinessError('empty order');
+    this.eventBus.publish([new OrderPlaced({ orderId: this.id.toPrimitives() })]);
+  }
+}
+```
+
+`src/order/application/change-item-quantity.handler.ts`
+```ts
+export class ChangeItemQuantityHandler {
+  constructor(private readonly orders: OrderRepositoryPort) {}
+
+  async execute(cmd: { orderId: string; quantity: number }): Promise<void> {
+    const order = await this.orders.findById(new OrderId(cmd.orderId));
+    order.items[0].quantity.value = cmd.quantity;
+    await this.orders.save(order);
+  }
+}
+```

@@ -1,0 +1,74 @@
+Review the aggregate design of our catalog bounded context, please. We are unsure about boundaries and ids.
+
+`src/catalog/domain/product.aggregate.ts`
+```ts
+export class Product {
+  constructor(
+    public readonly id: string,
+    private name: string,
+    private supplier: Supplier,
+    private price: Money,
+  ) {}
+
+  rename(name: string): void {
+    if (!name.trim()) throw new DomainValidationError('empty name');
+    this.name = name;
+  }
+
+  supplierName(): string {
+    return this.supplier.companyName();
+  }
+}
+```
+
+`src/catalog/domain/supplier.aggregate.ts`
+```ts
+export class Supplier extends AggregateRoot<SupplierId, SupplierEvent> {
+  companyName(): string { return this.name; }
+  suspend(): void { this.status = SupplierStatus.SUSPENDED; }
+}
+```
+
+`src/catalog/domain/category.entity.ts`
+```ts
+export class Category extends Entity<CategoryId> {
+  public numericId?: number; // assigned by the database sequence on insert
+
+  setNumericId(id: number): void {
+    this.numericId = id;
+  }
+}
+```
+
+`src/catalog/infrastructure/category.repository.ts`
+```ts
+async save(category: Category): Promise<void> {
+  const row = await this.dao.insert({ name: category.name });
+  category.setNumericId(row.identifiers[0].id);
+}
+```
+
+`src/catalog/domain/catalog.aggregate.ts`
+```ts
+export class Catalog extends AggregateRoot<CatalogId, CatalogEvent> {
+  private products: Product[] = [];
+  private categories: Category[] = [];
+  private suppliers: SupplierEntry[] = [];
+  private priceLists: PriceList[] = [];
+  private promotions: Promotion[] = [];
+  private reviews: Review[] = [];
+
+  addProduct(p: Product): void { this.products.push(p); }
+  removeProduct(id: string): void { this.products = this.products.filter(p => p.id !== id); }
+  addCategory(c: Category): void { this.categories.push(c); }
+  removeCategory(c: Category): void { this.categories = this.categories.filter(x => x !== c); }
+  registerSupplier(s: SupplierEntry): void { this.suppliers.push(s); }
+  publishPriceList(l: PriceList): void { this.priceLists.push(l); }
+  retirePriceList(l: PriceList): void { this.priceLists = this.priceLists.filter(x => x !== l); }
+  startPromotion(p: Promotion): void { this.promotions.push(p); }
+  endPromotion(p: Promotion): void { this.promotions = this.promotions.filter(x => x !== p); }
+  addReview(r: Review): void { this.reviews.push(r); }
+  moderateReview(r: Review): void { r.hide(); }
+  recalculateAllPrices(): void { this.products.forEach(p => p.reprice(this.priceLists)); }
+}
+```

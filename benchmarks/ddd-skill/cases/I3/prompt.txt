@@ -1,0 +1,9 @@
+Implement Money and Email value objects.
+
+This is Implementation mode. I already answered your Ambiguity Gate questions below and I approve the Turn 1 domain model in advance, so do NOT stop and ask: go straight to the full Turn 2 output (DDD Decision Log, then the code, in the order your workflow prescribes).
+- Bounded Context / Module: billing
+- Aggregate Root: Invoice (consumes both, not needed in this task)
+- Invariants: Money amount must not be negative, currency is a Currency value object that already exists; adding Money of different currencies is a business error; Email must be a syntactically valid address, normalized to lowercase and trimmed.
+- Domain events: none.
+
+Assume these already exist and import them from '@domain-kernel': ValueObject<T> (protected readonly value, isEqual), Entity<Id>, AggregateRoot<Id, Event> (addDomainEvent / pullDomainEvents), DomainEvent<Payload>, DomainError (abstract, with abstract code), DomainValidationError, DomainBusinessError, Clock and IdGenerator ports. Both value objects need validation, a way to convert to primitives (ToPrimitives), and value equality. Money needs add() and subtract().

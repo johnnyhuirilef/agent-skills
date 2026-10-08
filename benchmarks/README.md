@@ -1,0 +1,113 @@
+# Benchmarks
+
+Tools to measure a skill change instead of asserting it. Each tool compares skill versions on the same fixed inputs. Run the tool on the version before the change and on the version after it, then compare the numbers.
+
+Requirements: Python 3 (standard library only), Node.js with npm. Run every Python script with `python3 -I`.
+
+| Tool | Skill it measures | What it measures |
+|---|---|---|
+| [`unit-test-mutation/`](unit-test-mutation/) | `unit-test-declarative-architect` (or any unit-test skill) | How many planted bugs the generated tests catch |
+| [`ddd-skill/`](ddd-skill/) | `ddd-typescript-architect` | Review recall and severity, false positives on clean code, implementation checks |
+| [`skill-example-typecheck/`](skill-example-typecheck/) | `unit-test-declarative-architect` | `tsc` errors in the TypeScript examples inside the skill |
+
+Generated files (candidate projects, responses, results, extracted blocks, `node_modules/`) are ignored by `benchmarks/.gitignore`.
+
+## unit-test-mutation
+
+**What it measures.** An agent uses the skill to write unit tests for a use case in a small TypeScript project (`base/src/`). The harness then applies each mutant from `mutants.json` (one planted bug, for example a flipped condition or a removed call) to the use case and runs the suite. A mutant is *killed* when a test that passes on the original source fails, disappears or times out under the mutant. There are 10 mutants for each use case:
+
+| Use case | File |
+|---|---|
+| `auth` | `src/auth/ResetPassword.ts` |
+| `billing` | `src/billing/ChargeSubscription.ts` |
+| `transfer` | `src/transfer/TransferFunds.ts` |
+
+The harness also records the test count, the base pass rate and whether `tsc --noEmit` passes. It always scores the tests against the pristine `base/src/`, so changes a candidate made to `src/` do not affect the score.
+
+**How to run.**
+
+```bash
+cd benchmarks/unit-test-mutation
+(cd base && npm ci)
+python3 -I harness.py check                  # every mutant applies to exactly one place in base/src
+./new-project.sh v4-auth-1                   # creates projects/v4-auth-1 (<label>-<usecase>-<sample>)
+# run one fresh agent session with the prompt in PROMPT.md, pointed at projects/v4-auth-1
+./runall.sh                                  # scores every projects/* dir into results/<name>.json
+# or one project:
+python3 -I harness.py run projects/v4-auth-1 auth results/v4-auth-1.json
+```
+
+**How to interpret.** `killed` is the main number (out of 10 for each project). A version comparison uses the same number of samples for each use case; the baselines below use 2 samples x 3 use cases = 60 mutants. Check `tests_failed` and `typecheck_ok` too: a suite that does not pass on the base source kills nothing.
+
+## ddd-skill
+
+**What it measures.** Fixed cases in `cases/<ID>/` (`prompt.txt` is the user request, `truth.json` is the answer key):
+
+- `R1`-`R3`: review requests with planted defects. The scorer measures *recall* (the share of planted defects mentioned in the prose) and *severity* (the share of mentioned defects with an accepted severity label within 400 characters).
+- `R4`, `R5`: review requests on clean code. The scorer counts false positives (lines that report a BLOCKER, CRITICAL, MAJOR or WARNING finding).
+- `I1`-`I3`: implementation requests. The scorer runs regex checks against the fenced code only (checklist and comment lines removed).
+
+**How to run.**
+
+```bash
+cd benchmarks/ddd-skill
+python3 -I score.py --selftest               # scorer and answer keys are consistent
+# generate responses with the prompt in PROMPT.md into responses/<ID>__<sample>.md
+python3 -I score.py responses results.json   # per-response table and means by case
+```
+
+**How to interpret.** Recall and severity near 1.0 and zero false positives on `R4` and `R5` are the target. For `I*` cases, compare `checks_passed / checks_total`. Also read the `R5` answers yourself: the verdict (for example APPROVE or REFACTOR) shows whether the skill invents work on clean code, and the regex scorer does not grade it.
+
+## skill-example-typecheck
+
+**What it measures.** `extract.py` takes every `ts` / `typescript` fenced block from `SKILL.md` and `references/*.md` of a skill and typechecks it with `tsc --strict`. A block without its own imports gets a prelude that imports the stub types. Blocks are split into a Vitest group and a Jest group by the APIs they use. Blocks whose first line starts with `// Don't` (deliberate anti-examples) are excluded. The `stubs/` files model the SUT types that the `unit-test-declarative-architect` examples use (`Order`, `OrderFactory`, `ProcessOrder`, repositories, errors). For a different skill, write stubs for its example types first.
+
+**How to run.**
+
+```bash
+cd benchmarks/skill-example-typecheck
+npm ci
+cd ../..
+python3 -I benchmarks/skill-example-typecheck/extract.py skills/unit-test-declarative-architect
+```
+
+Output goes to `benchmarks/skill-example-typecheck/runs/<label>/` (default label `latest`; pass a second argument to keep several runs).
+
+**How to interpret.** `TOTAL tsc errors` should be 0. Each error line names the generated block file (`block_<reference>_<n>.ts`), so you can find the source block in the skill.
+
+## Known limits
+
+- **Ceiling effect.** The mutation benchmark scored 58/60 for every version measured. It shows that a change did not make the tests worse, but it cannot show that a change made them better. Harder mutants are needed to separate versions.
+- **Regex scorer.** The DDD scorer matches regexes, not meaning. A correct answer that uses different words can score as a miss, and a wrong answer that uses the expected words can score as a hit. Read a sample of responses before trusting a change in the numbers.
+- **Small samples.** The baselines use 2 samples for each case or use case. Differences of one mutant or one check are within noise.
+- **Token counts** come from the agent sessions, not from these tools. Record them yourself when you generate.
+
+## Recorded baselines
+
+### unit-test-mutation (`unit-test-declarative-architect`)
+
+| Version | Mutants killed | Tests per suite | Tokens per generation |
+|---|---|---|---|
+| Original | 58/60 | 14.8 | 74.9k |
+| PR #2 before cleanup | 58/60 | 17.8 | 83.8k |
+| PR #2 after cleanup | 58/60 | 18.5 | 82.5k |
+
+### ddd-skill (`ddd-typescript-architect`)
+
+| Metric | Original | After conceptual audit |
+|---|---|---|
+| Review recall | 100% | 100% |
+| Review severity | 100% | 100% |
+| Implementation checks | 12/12 | 12/12 |
+| R5 (clean code) verdicts, 2 samples | APPROVE + REFACTOR | APPROVE x2 |
+| Tokens (14 comparable generations) | 82.9k | 77.5k |
+
+### skill-example-typecheck (`unit-test-declarative-architect`)
+
+| Version | tsc errors |
+|---|---|
+| Original (`main`) | 34 |
+| PR #2 before cleanup | 48 |
+| PR #2 after cleanup | 0 |
+
+The stubs model the types of the cleaned-up examples, so part of the error count on older versions is stub mismatch rather than broken code. Compare versions with the same stubs only.
